@@ -72,10 +72,17 @@ exports.loginUser = async (req, res) => {
 		if (!match) {
 			return res.status(401).send('Invalid username or password');
 		}
-		// Login successful: write user to session
+		// Login successful: regenerate session to prevent session fixation
 		if (req?.session) {
-			// minimal session user payload; avoid storing password
-			req.session.user = { username };
+			return req.session.regenerate((err) => {
+				if (err) {
+					console.error('Session regenerate error:', err);
+					return res.status(500).send('Internal server error');
+				}
+				// minimal session user payload; avoid storing password
+				req.session.user = { username };
+				return res.send(`User ${username} logged in successfully.`);
+			});
 		}
 		return res.send(`User ${username} logged in successfully.`);
 	} catch (err) {
