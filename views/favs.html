@@ -8,6 +8,9 @@
 <body>
   <h2>Your Favorites</h2>
   <p>This is a protected page. Use <a href="/auth/me">/auth/me</a> to see session info.</p>
-  <p><a href="/logout">Log out</a></p>
+  <form action="/logout" method="post" style="display:inline">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}" />
+    <p><button type="submit">Log out</button></p>
+  </form>
 </body>
 </html>
