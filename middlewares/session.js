@@ -15,13 +15,14 @@ function sessionMiddleware() {
   }
 
   const sessionSecret = configuredSessionSecret || 'dev-secret';
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return session({
-    secret: sessionSecret,
+    secret: process.env.SESSION_SECRET || 'dev-secret', // should be set to a secure value in production
     resave: false, // don't save session if unmodified
     saveUninitialized: false, // only save session if something is stored
     cookie: {
-      secure: false, // secure should be true in production with HTTPS
+      secure: isProduction ? 'auto' : false, // send secure cookies in production when the request is HTTPS
       httpOnly: true, // helps mitigate XSS attacks but javascript won't be able to access this cookie
       sameSite: 'lax', // reasonable default to mitigate CSRF
       maxAge: sessionMaxAge // set cookie expiration based on env or default
