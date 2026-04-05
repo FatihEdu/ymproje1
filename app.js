@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const createUserRoutes = require('./routes/userRoutes');
+const userRoutes = require('./routes/userRoutes');
 const bodyMiddleware = require('./middlewares/body');
 const sessionMiddleware = require('./middlewares/session');
 
@@ -17,11 +17,7 @@ app.use(sessionMiddleware());
 // CSRF protection (requires session + body parser)
 app.use(require('./middlewares/csrf')());
 
-// Use our routes (mount router created with app-level middleware available)
-// Note: `routes/userRoutes.js` exports a factory returning a router.
-const userRoutes = typeof createUserRoutes === 'function'
-	? createUserRoutes({ requireAuth: require('./middlewares/auth').requireAuth })
-	: createUserRoutes;
+// Mount the user router
 app.use('/', userRoutes);
 
 const server = app.listen(PORT, () => {
