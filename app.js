@@ -20,6 +20,14 @@ app.use(require('./middlewares/csrf')());
 // Mount the user router
 app.use('/', userRoutes);
 
+// CSRF error handler – must be defined after routes
+app.use((err, req, res, next) => {
+	if (err.code === 'EBADCSRFTOKEN') {
+		return res.status(403).send('Invalid or missing CSRF token.');
+	}
+	next(err);
+});
+
 const server = app.listen(PORT, () => {
  console.log(`Server running at http://localhost:${PORT}`);
 });
