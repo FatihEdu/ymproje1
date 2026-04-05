@@ -93,6 +93,7 @@ exports.logoutUser = (req, res) => {
 				console.error('Session destroy error:', err);
 				return res.status(500).send('Error logging out');
 			}
+			res.clearCookie('connect.sid');
 			return res.sendFile(path.join(__dirname, '../views/logout.html'));
 		});
 	} else {
