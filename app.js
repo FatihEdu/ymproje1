@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const userRoutes = require('./routes/userRoutes');
 const bodyMiddleware = require('./middlewares/body');
 const sessionMiddleware = require('./middlewares/session');
@@ -11,16 +12,20 @@ const PORT = process.env.PORT || 3000;
 // Middleware to parse form data
 app.use(bodyMiddleware());
 
+// Cookie parser (required by csrf-csrf to read the CSRF cookie from requests)
+app.use(cookieParser());
+
 // Session middleware (configured in middlewares/session.js)
 app.use(sessionMiddleware());
 
-// CSRF protection (requires session + body parser)
+// CSRF protection (requires cookie-parser + session + body parser)
 app.use(require('./middlewares/csrf')());
 
 // Mount the user router
 app.use('/', userRoutes);
 
 // CSRF error handler – must be defined after routes
+// csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
 app.use((err, req, res, next) => {
 	if (err.code === 'EBADCSRFTOKEN') {
 		return res.status(403).send('Invalid or missing CSRF token.');

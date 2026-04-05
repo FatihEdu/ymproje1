@@ -24,7 +24,8 @@ function sessionMiddleware() {
     secret: process.env.SESSION_SECRET || 'dev-secret', // should be set to a secure value in production
     resave: false, // don't save session if unmodified
     saveUninitialized: false, // only save session if something is stored
-    store: new session.MemoryStore(), // explicitly allow MemoryStore only outside production
+    // no persistent store configured; defaults to MemoryStore (dev only)
+    // replace with a real store (e.g. connect-redis) before running in production
     cookie: {
       secure: isProduction ? 'auto' : false, // send secure cookies in production when the request is HTTPS
       httpOnly: true, // helps mitigate XSS attacks but javascript won't be able to access this cookie
