@@ -10,6 +10,10 @@ exports.getRegisterPage = (req, res) => {
  res.sendFile(path.join(__dirname, '../views/register.html'));
 };
 
+exports.getLoginPage = (req, res) => {
+	res.sendFile(path.join(__dirname, '../views/login.html'));
+};
+
 exports.registerUser = async (req, res) => {
  const { username, password } = req.body;
 
@@ -29,4 +33,28 @@ exports.registerUser = async (req, res) => {
 	 console.error('Hashing error:', err);
 	 res.status(500).send('Internal server error');
  }
+};
+
+exports.loginUser = async (req, res) => {
+	const { username, password } = req.body;
+	if (!username || !password) {
+		return res.status(400).send('Please fill all fields.');
+	}
+
+	try {
+		const users = User.getAll();
+		const found = users.find((u) => u.username === username);
+		if (!found) {
+			return res.status(401).send('Invalid username or password');
+		}
+		const match = await bcrypt.compare(password, found.password);
+		if (!match) {
+			return res.status(401).send('Invalid username or password');
+		}
+		// Login successful. For now, just respond with success message.
+		return res.send(`User ${username} logged in successfully.`);
+	} catch (err) {
+		console.error('Login error:', err);
+		return res.status(500).send('Internal server error');
+	}
 };
