@@ -1,4 +1,5 @@
 const path = require('node:path');
+const fs = require('node:fs');
 const bcrypt = require('bcryptjs');
 const User = require('../models/userModel');
 
@@ -7,11 +8,31 @@ const MAX_SALT_ROUNDS = 20;
 const DEFAULT_SALT_ROUNDS = 10;
 
 exports.getRegisterPage = (req, res) => {
- res.sendFile(path.join(__dirname, '../views/register.html'));
+ try {
+	 const file = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
+	 const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	 const out = file.replace('<!--CSRF-->', tokenInput);
+	 res.send(out);
+ } catch (err) {
+	 console.error('Read register page error:', err);
+	 res.status(500).send('Internal server error');
+ }
 };
 
 exports.getLoginPage = (req, res) => {
-	res.sendFile(path.join(__dirname, '../views/login.html'));
+ try {
+	 const file = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
+	 const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	 const out = file.replace('<!--CSRF-->', tokenInput);
+	 res.send(out);
+ } catch (err) {
+	 console.error('Read login page error:', err);
+	 res.status(500).send('Internal server error');
+ }
+};
+
+exports.getFavsPage = (req, res) => {
+  res.sendFile(path.join(__dirname, '../views/favs.html'));
 };
 
 exports.registerUser = async (req, res) => {
@@ -51,10 +72,33 @@ exports.loginUser = async (req, res) => {
 		if (!match) {
 			return res.status(401).send('Invalid username or password');
 		}
-		// Login successful. For now, just respond with success message.
+		// Login successful: write user to session
+		if (req?.session) {
+			// minimal session user payload; avoid storing password
+			req.session.user = { username };
+		}
 		return res.send(`User ${username} logged in successfully.`);
 	} catch (err) {
 		console.error('Login error:', err);
 		return res.status(500).send('Internal server error');
+	}
+};
+
+exports.authMe = (req, res) => {
+	const user = req?.session?.user ?? null;
+	return res.json({ user });
+};
+
+exports.logoutUser = (req, res) => {
+	if (req?.session) {
+		req.session.destroy((err) => {
+			if (err) {
+				console.error('Session destroy error:', err);
+				return res.status(500).send('Error logging out');
+			}
+			return res.sendFile(path.join(__dirname, '../views/logout.html'));
+		});
+	} else {
+		return res.sendFile(path.join(__dirname, '../views/logout.html'));
 	}
 };

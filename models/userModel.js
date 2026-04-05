@@ -21,6 +21,7 @@ const User = {
     try {
       return JSON.parse(data);
     } catch (error) {
+      console.error('Error parsing users.json:', error);
       return [];
     }
   },
