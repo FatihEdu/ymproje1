@@ -71,10 +71,10 @@ exports.loginUser = async (req, res) => {
 				}
 				// minimal session user payload; avoid storing password
 				req.session.user = { username };
-				return res.send(`User ${username} logged in successfully.`);
+				return res.redirect('/favs');
 			});
 		}
-		return res.send(`User ${username} logged in successfully.`);
+		return res.redirect('/favs');
 	} catch (err) {
 		console.error('Login error:', err);
 		return res.status(500).send('Internal server error');
