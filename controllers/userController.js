@@ -2,6 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const bcrypt = require('bcryptjs');
 const User = require('../models/userModel');
+const { generateCsrfToken } = require('../middlewares/csrf');
 
 const MIN_SALT_ROUNDS = 10;
 const MAX_SALT_ROUNDS = 20;
@@ -13,18 +14,18 @@ const loginTemplate = fs.readFileSync(path.join(__dirname, '../views/login.html'
 const favsTemplate = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
 
 exports.getRegisterPage = (req, res) => {
-	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	res.send(registerTemplate.replace('<!--CSRF-->', tokenInput));
 };
 
 exports.getLoginPage = (req, res) => {
-	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	const errorHtml = req.query.error ? '<p style="color:red">Invalid username or password.</p>' : '';
 	res.send(loginTemplate.replace('<!--CSRF-->', tokenInput).replace('<!--ERROR-->', errorHtml));
 };
 
 exports.getFavsPage = (req, res) => {
-	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	res.send(favsTemplate.replace('<!--CSRF-->', tokenInput));
 };
 
@@ -77,7 +78,8 @@ exports.loginUser = async (req, res) => {
 				return res.redirect('/favs');
 			});
 		}
-		return res.redirect('/favs');
+		console.error('Login error: session is unavailable');
+		return res.status(500).send('Internal server error');
 	} catch (err) {
 		console.error('Login error:', err);
 		return res.status(500).send('Internal server error');

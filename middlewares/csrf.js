@@ -14,6 +14,7 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   cookieName,
   cookieOptions: {
     secure: isProduction, // require HTTPS in production only
+    path: '/',
     sameSite: 'strict',
     httpOnly: true,
   },
