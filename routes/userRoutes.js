@@ -10,6 +10,6 @@ router.get('/login', userController.getLoginPage);
 router.post('/login', userController.loginUser);
 router.get('/favs', requireAuth, userController.getFavsPage);
 router.get('/auth/me', userController.authMe);
-router.get('/logout', requireAuth, userController.logoutUser);
+router.post('/logout', requireAuth, userController.logoutUser);
 
 module.exports = router;
