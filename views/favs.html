@@ -9,7 +9,7 @@
   <h2>Your Favorites</h2>
   <p>This is a protected page. Use <a href="/auth/me">/auth/me</a> to see session info.</p>
   <form action="/logout" method="post" style="display:inline">
-    <input type="hidden" name="_csrf" value="{{csrfToken}}" />
+    <!--CSRF-->
     <p><button type="submit">Log out</button></p>
   </form>
 </body>

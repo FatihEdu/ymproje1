@@ -14,8 +14,10 @@ function sessionMiddleware() {
     throw new Error('SESSION_SECRET must be set in production');
   }
 
-  if (isProduction) {
-    throw new Error('Session store is not configured for production. Configure a persistent express-session store.');
+  const allowInMemoryStoreInProduction = process.env.SESSION_ALLOW_MEMORY_STORE_IN_PRODUCTION === 'true';
+
+  if (isProduction && !allowInMemoryStoreInProduction) {
+    throw new Error('Session store is not configured for production. Configure a persistent express-session store or set SESSION_ALLOW_MEMORY_STORE_IN_PRODUCTION=true to explicitly allow MemoryStore.');
   }
 
   return session({

@@ -10,6 +10,7 @@ const DEFAULT_SALT_ROUNDS = 10;
 // Cache templates at startup to avoid blocking the event loop on every request
 const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
 const loginTemplate = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
+const favsTemplate = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
 
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
@@ -23,7 +24,8 @@ exports.getLoginPage = (req, res) => {
 };
 
 exports.getFavsPage = (req, res) => {
-  res.sendFile(path.join(__dirname, '../views/favs.html'));
+	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	res.send(favsTemplate.replace('<!--CSRF-->', tokenInput));
 };
 
 exports.registerUser = async (req, res) => {
@@ -40,7 +42,7 @@ exports.registerUser = async (req, res) => {
  try {
 	 const hashed = await bcrypt.hash(password, saltRounds);
 	 User.save({ username, password: hashed });
-	 res.send(`User ${username} registered successfully! Check data/users.json`);
+	 return res.redirect('/login');
  } catch (err) {
 	 console.error('Hashing error:', err);
 	 res.status(500).send('Internal server error');
