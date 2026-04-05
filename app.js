@@ -14,10 +14,10 @@ app.use(express.urlencoded({ extended: true }));
 // been prefixed with /users)
 app.use('/', userRoutes);
 
-app.listen(PORT, (err) => {
- if (err) {
-   console.error(`Error starting server: ${err}`);
- } else {
-   console.log(`Server running at http://localhost:${PORT}`);
- }
+const server = app.listen(PORT, () => {
+ console.log(`Server running at http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+ console.error(`Error starting server: ${err}`);
 });
