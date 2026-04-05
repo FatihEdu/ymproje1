@@ -7,28 +7,18 @@ const MIN_SALT_ROUNDS = 10;
 const MAX_SALT_ROUNDS = 20;
 const DEFAULT_SALT_ROUNDS = 10;
 
+// Cache templates at startup to avoid blocking the event loop on every request
+const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
+const loginTemplate = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
+
 exports.getRegisterPage = (req, res) => {
- try {
-	 const file = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
-	 const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
-	 const out = file.replace('<!--CSRF-->', tokenInput);
-	 res.send(out);
- } catch (err) {
-	 console.error('Read register page error:', err);
-	 res.status(500).send('Internal server error');
- }
+	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	res.send(registerTemplate.replace('<!--CSRF-->', tokenInput));
 };
 
 exports.getLoginPage = (req, res) => {
- try {
-	 const file = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
-	 const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
-	 const out = file.replace('<!--CSRF-->', tokenInput);
-	 res.send(out);
- } catch (err) {
-	 console.error('Read login page error:', err);
-	 res.status(500).send('Internal server error');
- }
+	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
+	res.send(loginTemplate.replace('<!--CSRF-->', tokenInput));
 };
 
 exports.getFavsPage = (req, res) => {
