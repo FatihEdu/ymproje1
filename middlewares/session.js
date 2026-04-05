@@ -15,12 +15,18 @@ function sessionMiddleware() {
   }
 
   const sessionSecret = configuredSessionSecret || 'dev-secret';
+    : DEFAULT_SESSION_MAX_AGE_MS; // default 24 hours
   const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    throw new Error('Session store is not configured for production. Configure a persistent express-session store.');
+  }
 
   return session({
     secret: process.env.SESSION_SECRET || 'dev-secret', // should be set to a secure value in production
     resave: false, // don't save session if unmodified
     saveUninitialized: false, // only save session if something is stored
+    store: new session.MemoryStore(), // explicitly allow MemoryStore only outside production
     cookie: {
       secure: isProduction ? 'auto' : false, // send secure cookies in production when the request is HTTPS
       httpOnly: true, // helps mitigate XSS attacks but javascript won't be able to access this cookie
