@@ -10,7 +10,7 @@ exports.registerUser = async (req, res) => {
  const { username, password } = req.body;
 
  if (!username || !password) {
- return res.send('Please fill all fields.');
+ return res.status(400).send('Please fill all fields.');
  }
 
  const saltRounds = Number.parseInt(process.env.SALT_ROUNDS || '10', 10);
