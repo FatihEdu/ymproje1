@@ -7,9 +7,17 @@ function sessionMiddleware() {
   const sessionMaxAge = Number.isFinite(parsedMax) && parsedMax > 0
     ? parsedMax
     : DEFAULT_SESSION_MAX_AGE_MS; // default 24 hours
+  const configuredSessionSecret = process.env.SESSION_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!configuredSessionSecret && isProduction) {
+    throw new Error('SESSION_SECRET must be set in production');
+  }
+
+  const sessionSecret = configuredSessionSecret || 'dev-secret';
 
   return session({
-    secret: process.env.SESSION_SECRET || 'dev-secret', // should be set to a secure value in production
+    secret: sessionSecret,
     resave: false, // don't save session if unmodified
     saveUninitialized: false, // only save session if something is stored
     cookie: {
