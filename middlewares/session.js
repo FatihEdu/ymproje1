@@ -14,10 +14,6 @@ function sessionMiddleware() {
     throw new Error('SESSION_SECRET must be set in production');
   }
 
-  const sessionSecret = configuredSessionSecret || 'dev-secret';
-    : DEFAULT_SESSION_MAX_AGE_MS; // default 24 hours
-  const isProduction = process.env.NODE_ENV === 'production';
-
   if (isProduction) {
     throw new Error('Session store is not configured for production. Configure a persistent express-session store.');
   }
