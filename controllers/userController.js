@@ -18,7 +18,8 @@ exports.getRegisterPage = (req, res) => {
 
 exports.getLoginPage = (req, res) => {
 	const tokenInput = req.csrfToken ? `<input type="hidden" name="_csrf" value="${req.csrfToken()}">` : '';
-	res.send(loginTemplate.replace('<!--CSRF-->', tokenInput));
+	const errorHtml = req.query.error ? '<p style="color:red">Invalid username or password.</p>' : '';
+	res.send(loginTemplate.replace('<!--CSRF-->', tokenInput).replace('<!--ERROR-->', errorHtml));
 };
 
 exports.getFavsPage = (req, res) => {
@@ -49,18 +50,18 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
 	const { username, password } = req.body;
 	if (!username || !password) {
-		return res.status(400).send('Please fill all fields.');
+		return res.redirect('/login?error=1');
 	}
 
 	try {
 		const users = User.getAll();
 		const found = users.find((u) => u.username === username);
 		if (!found) {
-			return res.status(401).send('Invalid username or password');
+			return res.redirect('/login?error=1');
 		}
 		const match = await bcrypt.compare(password, found.password);
 		if (!match) {
-			return res.status(401).send('Invalid username or password');
+			return res.redirect('/login?error=1');
 		}
 		// Login successful: regenerate session to prevent session fixation
 		if (req?.session) {

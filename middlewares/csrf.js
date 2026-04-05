@@ -1,7 +1,7 @@
 const { doubleCsrf } = require('csrf-csrf');
 
 const { doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || process.env.SESSION_SECRET,
+  getSecret: () => process.env.CSRF_SECRET || process.env.SESSION_SECRET || 'dev-secret',
   getSessionIdentifier: (req) =>
     (req.session && (req.session.id || req.sessionID)) ||
     req.sessionID ||
