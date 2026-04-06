@@ -346,3 +346,17 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
   font-size: .8rem;
 }
+
+/* ---------- Navbar logout form ---------- */
+.navbar__logout-form { display: inline; }
+
+.btn-nav {
+  font-size: .9rem;
+  padding: .45rem .85rem;
+}
+
+/* ---------- Utility ---------- */
+.text-center { text-align: center; }
+.text-muted  { color: var(--muted); }
+.mt-3  { margin-top: .75rem; }
+.mt-5  { margin-top: 1.25rem; }

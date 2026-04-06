@@ -21,12 +21,12 @@ const navbarTemplate   = fs.readFileSync(path.join(__dirname, '../views/navbar.h
  * When the user is logged in show a logout form; otherwise show Login / Register links.
  */
 function buildNavbar(req, res) {
-	const isLoggedIn = Boolean(req?.session?.user);
+	const isLoggedIn = Boolean(req.session?.user);
 	const authHtml = isLoggedIn
 		? `<li>
-        <form action="/logout" method="post" style="display:inline">
+        <form action="/logout" method="post" class="navbar__logout-form">
           <input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">
-          <button type="submit" class="btn btn-outline-white" style="font-size:.9rem;padding:.45rem .85rem">Çıkış Yap</button>
+          <button type="submit" class="btn btn-outline-white btn-nav">Çıkış Yap</button>
         </form>
        </li>`
 		: `<li><a href="/login">Giriş Yap</a></li><li><a href="/register">Kayıt Ol</a></li>`;
