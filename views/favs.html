@@ -1,16 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <title>Favorites</title>
-  <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Favoriler – Kur Takip</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <h2>Your Favorites</h2>
-  <p>This is a protected page. Use <a href="/auth/me">/auth/me</a> to see session info.</p>
-  <form action="/logout" method="post" style="display:inline">
-    <!--CSRF-->
-    <p><button type="submit">Log out</button></p>
-  </form>
+
+  <!--NAVBAR-->
+
+  <main class="page">
+    <div class="card">
+      <h2>Favori Kurlarınız</h2>
+      <p style="margin-top:.75rem;color:var(--muted)">Favori döviz kurlarınız burada görünecek. Özellik yakında eklenecektir.</p>
+      <form action="/logout" method="post" style="margin-top:1.5rem">
+        <!--CSRF-->
+        <button type="submit" class="btn btn-danger">Çıkış Yap</button>
+      </form>
+    </div>
+  </main>
+
 </body>
 </html>
