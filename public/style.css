@@ -327,15 +327,14 @@ a:hover { text-decoration: underline; }
   opacity: .35;
 }
 
-/* ---------- Two-column layout (home) ---------- */
+/* ---------- Stacked full-width layout (home) ---------- */
 .home-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
 @media (max-width: 768px) {
-  .home-grid { grid-template-columns: 1fr; }
   .hero__title { font-size: 1.5rem; }
 }
 
