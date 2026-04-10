@@ -9,24 +9,49 @@ const MAX_SALT_ROUNDS = 20;
 const DEFAULT_SALT_ROUNDS = 10;
 
 // Cache templates at startup to avoid blocking the event loop on every request
+const indexTemplate    = fs.readFileSync(path.join(__dirname, '../views/index.html'), 'utf8');
 const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
-const loginTemplate = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
-const favsTemplate = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
+const loginTemplate    = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
+const favsTemplate     = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
+const logoutTemplate   = fs.readFileSync(path.join(__dirname, '../views/logout.html'), 'utf8');
+const navbarTemplate        = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
+const navbarAuthLoggedin    = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedin.html'), 'utf8');
+const navbarAuthLoggedout   = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedout.html'), 'utf8');
+
+/**
+ * Build the navbar HTML.
+ * When the user is logged in show a logout form; otherwise show Login / Register links.
+ */
+function buildNavbar(req, res) {
+	const isLoggedIn = Boolean(req.session?.user);
+	const authHtml = isLoggedIn
+		? navbarAuthLoggedin.replace('<!--CSRF-->', `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`)
+		: navbarAuthLoggedout;
+	return navbarTemplate.replace('<!--NAV_AUTH-->', authHtml);
+}
+
+function injectNavbar(template, req, res) {
+	return template.replace('<!--NAVBAR-->', buildNavbar(req, res));
+}
+
+exports.getHomePage = (req, res) => {
+	res.send(injectNavbar(indexTemplate, req, res));
+};
 
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
-	res.send(registerTemplate.replace('<!--CSRF-->', tokenInput));
+	res.send(injectNavbar(registerTemplate, req, res).replace('<!--CSRF-->', tokenInput));
 };
 
 exports.getLoginPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
-	const errorHtml = req.query.error ? '<p style="color:red">Invalid username or password.</p>' : '';
-	res.send(loginTemplate.replace('<!--CSRF-->', tokenInput).replace('<!--ERROR-->', errorHtml));
+	const errorHtml = req.query.error ? '<p class="error-msg">Kullanıcı adı veya şifre hatalı.</p>' : '';
+	res.send(injectNavbar(loginTemplate, req, res).replace('<!--CSRF-->', tokenInput).replace('<!--ERROR-->', errorHtml));
 };
 
 exports.getFavsPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
-	res.send(favsTemplate.replace('<!--CSRF-->', tokenInput));
+	res.send(injectNavbar(favsTemplate, req, res).replace('<!--CSRF-->', tokenInput));
 };
 
 exports.registerUser = async (req, res) => {
@@ -92,6 +117,11 @@ exports.authMe = (req, res) => {
 };
 
 exports.logoutUser = (req, res) => {
+	// Build the logout page HTML before destroying the session so the navbar
+	// can still check whether the user was logged in (it will show logged-out
+	// state since the session is being destroyed anyway).
+	const logoutHtml = injectNavbar(logoutTemplate, { session: null }, res);
+
 	if (req?.session) {
 		req.session.destroy((err) => {
 			if (err) {
@@ -99,9 +129,9 @@ exports.logoutUser = (req, res) => {
 				return res.status(500).send('Error logging out');
 			}
 			res.clearCookie('connect.sid');
-			return res.sendFile(path.join(__dirname, '../views/logout.html'));
+			return res.send(logoutHtml);
 		});
 	} else {
-		return res.sendFile(path.join(__dirname, '../views/logout.html'));
+		return res.send(logoutHtml);
 	}
 };

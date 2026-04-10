@@ -1,19 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-	<meta charset="utf-8" />
-	<title>Login</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giriş Yap – Kur Takip</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
- <h2>Login</h2>
- <!--ERROR-->
- <form action="/login" method="POST">
- <!--CSRF-->
- <label for="username">Username</label>
- <input type="text" id="username" name="username" placeholder="Username" required><br><br>
- <label for="password">Password</label>
- <input type="password" id="password" name="password" placeholder="Password" required><br><br>
- <button type="submit">Login</button>
- </form>
+
+  <!--NAVBAR-->
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <h2>Giriş Yap</h2>
+      <!--ERROR-->
+      <form action="/login" method="POST">
+        <!--CSRF-->
+        <div class="form-group">
+          <label for="username">Kullanıcı Adı</label>
+          <input type="text" id="username" name="username" placeholder="Kullanıcı adınız" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Şifre</label>
+          <input type="password" id="password" name="password" placeholder="Şifreniz" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+      </form>
+      <p class="auth-footer">Hesabınız yok mu? <a href="/register">Kayıt Ol</a></p>
+    </div>
+  </div>
+
 </body>
 </html>

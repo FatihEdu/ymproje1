@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kur Takip – Ana Sayfa</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!--NAVBAR-->
+
+  <main class="page">
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1 class="hero__title">Döviz Kurlarını Takip Edin</h1>
+      <p class="hero__sub">Güncel döviz kurlarını, grafikleri ve favori paritelerinizi tek ekranda görüntüleyin.</p>
+      <div class="hero__actions">
+        <a href="/register" class="btn btn-white">Ücretsiz Kayıt Ol</a>
+        <a href="/login"    class="btn btn-outline-white">Giriş Yap</a>
+      </div>
+    </section>
+
+    <!-- Summary cards (populated by future issues) -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-card__label">USD/TRY</span>
+        <span class="summary-card__value" id="val-usd">–</span>
+        <span class="summary-card__change" id="chg-usd"></span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-card__label">EUR/TRY</span>
+        <span class="summary-card__value" id="val-eur">–</span>
+        <span class="summary-card__change" id="chg-eur"></span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-card__label">GBP/TRY</span>
+        <span class="summary-card__value" id="val-gbp">–</span>
+        <span class="summary-card__change" id="chg-gbp"></span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-card__label">ALTIN (gr)</span>
+        <span class="summary-card__value" id="val-gold">–</span>
+        <span class="summary-card__change" id="chg-gold"></span>
+      </div>
+    </div>
+
+    <!-- Main content grid -->
+    <div class="home-grid">
+
+      <!-- Chart placeholder -->
+      <div class="card">
+        <div class="section-header">
+          <h3>Kur Grafiği</h3>
+        </div>
+        <div class="placeholder-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3zm4 10l3-3 3 3 5-5 1.4 1.4-6.4 6.4-3-3-2 2L7 13z"/></svg>
+          <span>Grafik yakında eklenecek</span>
+        </div>
+      </div>
+
+      <!-- Currency list placeholder -->
+      <div class="card">
+        <div class="section-header">
+          <h3>Kur Listesi</h3>
+        </div>
+        <div class="placeholder-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+          <span>Kur listesi yakında eklenecek</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    &copy; <span id="year"></span> Kur Takip
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>

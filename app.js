@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const userRoutes = require('./routes/userRoutes');
@@ -8,6 +9,8 @@ const sessionMiddleware = require('./middlewares/session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Serve static assets (CSS, JS, images, …)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to parse form data
 app.use(bodyMiddleware());
