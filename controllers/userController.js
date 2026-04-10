@@ -34,22 +34,33 @@ function injectNavbar(template, req, res) {
 	return template.replace('<!--NAVBAR-->', buildNavbar(req, res));
 }
 
+function ensureSessionForCsrf(req) {
+	if (req?.session && !req.session.csrfInitialized) {
+		// With saveUninitialized=false, mark session as modified so session ID persists
+		// across GET(form) -> POST(submit) and CSRF validation can succeed.
+		req.session.csrfInitialized = true;
+	}
+}
+
 exports.getHomePage = (req, res) => {
 	res.send(injectNavbar(indexTemplate, req, res));
 };
 
 exports.getRegisterPage = (req, res) => {
+	ensureSessionForCsrf(req);
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	res.send(injectNavbar(registerTemplate, req, res).replace('<!--CSRF-->', tokenInput));
 };
 
 exports.getLoginPage = (req, res) => {
+	ensureSessionForCsrf(req);
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	const errorHtml = req.query.error ? '<p class="error-msg">Kullanıcı adı veya şifre hatalı.</p>' : '';
 	res.send(injectNavbar(loginTemplate, req, res).replace('<!--CSRF-->', tokenInput).replace('<!--ERROR-->', errorHtml));
 };
 
 exports.getFavsPage = (req, res) => {
+	ensureSessionForCsrf(req);
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	res.send(injectNavbar(favsTemplate, req, res).replace('<!--CSRF-->', tokenInput));
 };
