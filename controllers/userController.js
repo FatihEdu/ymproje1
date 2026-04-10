@@ -14,7 +14,9 @@ const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register
 const loginTemplate    = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
 const favsTemplate     = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
 const logoutTemplate   = fs.readFileSync(path.join(__dirname, '../views/logout.html'), 'utf8');
-const navbarTemplate   = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
+const navbarTemplate        = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
+const navbarAuthLoggedin    = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedin.html'), 'utf8');
+const navbarAuthLoggedout   = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedout.html'), 'utf8');
 
 /**
  * Build the navbar HTML.
@@ -23,13 +25,8 @@ const navbarTemplate   = fs.readFileSync(path.join(__dirname, '../views/navbar.h
 function buildNavbar(req, res) {
 	const isLoggedIn = Boolean(req.session?.user);
 	const authHtml = isLoggedIn
-		? `<li>
-        <form action="/logout" method="post" class="navbar__logout-form">
-          <input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">
-          <button type="submit" class="btn btn-outline-white btn-nav">Çıkış Yap</button>
-        </form>
-       </li>`
-		: `<li><a href="/login">Giriş Yap</a></li><li><a href="/register">Kayıt Ol</a></li>`;
+		? navbarAuthLoggedin.replace('<!--CSRF-->', `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`)
+		: navbarAuthLoggedout;
 	return navbarTemplate.replace('<!--NAV_AUTH-->', authHtml);
 }
 
