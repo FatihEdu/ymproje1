@@ -6,7 +6,7 @@ const { csrfSessionInit } = require('../middlewares/csrf');
 const router = express.Router();
 
 router.get('/', userController.getHomePage);
-router.get('/register', csrfSessionInit, userController.getRegisterPage); // First csrfSessionInit to ensure session exists for token generation and then getRegisterPage to render the page with the token
+router.get('/register', csrfSessionInit, userController.getRegisterPage); // csrfSessionInit marks session as modified so a connect.sid cookie is issued before generateCsrfToken() is called
 router.post('/register', userController.registerUser);
 router.get('/login', csrfSessionInit, userController.getLoginPage);
 router.post('/login', userController.loginUser);
