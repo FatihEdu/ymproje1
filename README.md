@@ -7,3 +7,5 @@ MVP/Demo Kur Takip
 3) Bağımlılıkları yükle: `npm install`
 4) Eğer `.env.example` varsa `.env` olarak kopyala ve gerekli değişkenleri doldur
 5) Uygulamayı çalıştır: `node app.js`
+
+Benim ilk commitim
