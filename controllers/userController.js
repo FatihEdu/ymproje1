@@ -68,7 +68,19 @@ exports.registerUser = async (req, res) => {
  try {
 	 const hashed = await bcrypt.hash(password, saltRounds);
 	 User.save({ username, password: hashed });
-	 return res.redirect('/login');
+	 // Auto-login after successful registration
+	 if (req?.session) {
+	 	return req.session.regenerate((err) => {
+	 		if (err) {
+	 			console.error('Session regenerate error after register:', err);
+	 			return res.status(500).send('Internal server error');
+	 		}
+	 		req.session.user = { username };
+	 		return res.redirect('/favs');
+	 	});
+	 }
+	 console.error('Register error: session is unavailable');
+	 return res.status(500).send('Internal server error');
  } catch (err) {
 	 console.error('Hashing error:', err);
 	 res.status(500).send('Internal server error');
