@@ -47,6 +47,11 @@ export async function compressMonthlies() {
     const monthKey = fileName.replace(/\.jsonl$/, "");
     if (monthKey === slotMonthKey || monthKey === calendarMonthKey) continue;
 
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) {
+      console.warn(`compress-monthlies: skipping unexpected file "${fileName}" (name must match YYYY-MM.jsonl)`);
+      continue;
+    }
+
     const [year, month] = monthKey.split("-");
     const sourcePath = path.join(currentDir, fileName);
     const targetDir = path.join(OUTPUT_ROOT, "monthlies", year);
