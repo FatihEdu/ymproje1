@@ -251,6 +251,7 @@ export async function runAll() {
   };
 }
 
+// If run directly (instead of imported), execute and print the results
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   runAll()
     .then(({ latestSnapshot, currentMonthlyPath, outputRoot }) => {
