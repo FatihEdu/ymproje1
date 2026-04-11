@@ -1,4 +1,3 @@
-// automation/scrape-pages/src/scrapers/yapi.js
 import {
   parseTurkishDateTime,
   sha256Json,
@@ -67,6 +66,7 @@ export async function scrape(ctx) {
   const rows = payload?.d;
 
   if (!Array.isArray(rows)) {
+    console.error("Unexpected Yapi response payload:", payload);
     throw new Error("Yapi response does not contain payload.d array");
   }
 

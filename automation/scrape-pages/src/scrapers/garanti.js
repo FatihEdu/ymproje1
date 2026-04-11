@@ -1,4 +1,3 @@
-// automation/scrape-pages/src/scrapers/garanti.js
 import {createHash} from 'node:crypto';
 
 import {

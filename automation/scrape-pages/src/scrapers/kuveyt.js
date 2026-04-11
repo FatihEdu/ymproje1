@@ -1,4 +1,3 @@
-// automation/scrape-pages/src/scrapers/kuveyt.js
 import { sha256Json, pickDefined } from "./_shared.js";
 
 export const meta = {
