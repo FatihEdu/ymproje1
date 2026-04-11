@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Scrape Pages</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; max-width: 1000px; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f5; }
+    code, pre { white-space: pre-wrap; word-break: break-word; }
+    .ok { color: #0a7a0a; font-weight: 600; }
+    .err { color: #b00020; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Scrape Pages</h1>
+  <p><a href="./latest_all.json">latest_all.json</a></p>
+  <div id="meta"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Scraper</th>
+        <th>Status</th>
+        <th>Provider Updated</th>
+        <th>Scraped At</th>
+        <th>No Change</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    function appendMetaItem(container, label, value) {
+      const p = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = label + ":";
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(" " + (value || "-")));
+      container.appendChild(p);
+    }
+
+    function appendCell(row, text) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      row.appendChild(td);
+    }
+
+    function appendCodeCell(row, text) {
+      const td = document.createElement("td");
+      const code = document.createElement("code");
+      code.textContent = text;
+      td.appendChild(code);
+      row.appendChild(td);
+    }
+
+    async function main() {
+      const res = await fetch("./latest_all.json", { cache: "no-store" });
+      if (!res.ok) {
+        const errorText = (await res.text()).trim();
+        const errorDetails = errorText ? " - " + errorText.slice(0, 500) : "";
+        throw new Error(
+          "Failed to fetch ./latest_all.json: " + res.status + " " + res.statusText + errorDetails
+        );
+      }
+      const latest = await res.json();
+
+      const meta = document.getElementById("meta");
+      meta.textContent = "";
+      appendMetaItem(meta, "scheduledFor", latest.scheduledFor);
+      appendMetaItem(meta, "runStartedAt", latest.runStartedAt);
+      appendMetaItem(meta, "timezone", latest.timezone);
+
+      const tbody = document.getElementById("rows");
+      tbody.textContent = "";
+
+      for (const result of latest.results || []) {
+        const tr = document.createElement("tr");
+
+        const name = result?.meta?.name || result?.meta?.id || "unknown";
+        const providerUpdatedAt = result?.providerUpdatedAt || "-";
+        const scrapedAt = result?.scrapedAt || "-";
+        const noChange = result?.ok ? (result?.noChange === true ? "true" : "false") : "-";
+
+        appendCell(tr, name);
+
+        const statusTd = document.createElement("td");
+        const statusSpan = document.createElement("span");
+        statusSpan.className = result?.ok ? "ok" : "err";
+        statusSpan.textContent = result?.ok ? "ok" : "error";
+        statusTd.appendChild(statusSpan);
+        tr.appendChild(statusTd);
+
+        appendCodeCell(tr, providerUpdatedAt);
+        appendCodeCell(tr, scrapedAt);
+        appendCell(tr, noChange);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    main().catch((err) => {
+      const pre = document.createElement("pre");
+      pre.textContent = String(err);
+      document.body.appendChild(pre);
+    });
+  </script>
+</body>
+</html>
