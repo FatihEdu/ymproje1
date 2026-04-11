@@ -15,7 +15,16 @@ function splitPair(pair) {
 }
 
 function normalizePairForGaranti(rawCode) {
-  return String(rawCode || '').toUpperCase();
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return null;
+
+  // Garanti uses TL; normalize to TRY for a single shared vocabulary.
+  if (code === 'ALT/TL') return 'XAU/TRY';
+  if (code === 'GMS/TL') return 'XAG/TRY';
+  if (code === 'TL/ALT') return 'TRY/XAU';
+  if (code === 'TL/GMS') return 'TRY/XAG';
+
+  return code.replaceAll('TL', 'TRY');
 }
 
 function normalizePairForKuveyt(rawCode) {
