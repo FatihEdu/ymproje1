@@ -78,6 +78,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      actions: write
     outputs:
       changed: ${{ steps.detect_changes.outputs.changed }}
 

@@ -7,7 +7,7 @@ on:
       timezone: "Europe/Istanbul"
 
 permissions:
-  contents: write
+  contents: read
 
 
 concurrency:
@@ -17,6 +17,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
 
     steps:
       - name: Checkout main branch contents
