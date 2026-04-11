@@ -25,14 +25,13 @@ function getOffsetString(date, timezone) {
     timeZone: timezone,
     timeZoneName: "longOffset"
   }).formatToParts(date);
-  // raw value is like "GMT+03:00", "GMT-05:30", or "GMT+0"
-  const raw = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT+00:00";
-  const match = raw.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  // `longOffset` returns values like "GMT+03:00", "GMT-05:30", or "GMT" for UTC.
+  const raw = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  if (raw === "GMT") return "+00:00";
+  // Captures sign, two-digit hour, and optional two-digit minute (e.g. "+03:00" or "+05:30").
+  const match = raw.match(/GMT([+-])(\d{2}):(\d{2})/);
   if (!match) return "+00:00";
-  const sign = match[1];
-  const hh = match[2].padStart(2, "0");
-  const mm = (match[3] ?? "00").padStart(2, "0");
-  return `${sign}${hh}:${mm}`;
+  return `${match[1]}${match[2]}:${match[3]}`;
 }
 
 // Returns date/time parts for `date` expressed in `timezone`.
@@ -70,7 +69,10 @@ export function getRunTiming(now = new Date()) {
     sHour -= 1;
     if (sHour < 0) {
       sHour += 24;
-      // Roll back one calendar day; Date.UTC with day=0 gives the last day of the previous month
+      // Roll back one calendar day using UTC date arithmetic.
+      // Passing day=0 to Date.UTC yields the last day of the previous month, which is
+      // correct for any month boundary. We only use the resulting year/month/day values
+      // (not the time component), so UTC arithmetic is safe here regardless of DST.
       const prev = new Date(Date.UTC(sYear, sMonth - 1, sDay - 1));
       sYear = prev.getUTCFullYear();
       sMonth = prev.getUTCMonth() + 1;
@@ -83,6 +85,8 @@ export function getRunTiming(now = new Date()) {
   const pad2 = (n) => String(n).padStart(2, "0");
   const scheduledFor = `${sYear}-${pad2(sMonth)}-${pad2(sDay)}T${pad2(sHour)}:${pad2(sMinute)}:00${offset}`;
   const runStartedAt = `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}${offset}`;
+  // scheduledDate is the same instant as scheduledFor but as a Date object,
+  // used by getMonthKey() and passed to callers that need a Date for further arithmetic.
   const scheduledDate = new Date(scheduledFor);
 
   return {
