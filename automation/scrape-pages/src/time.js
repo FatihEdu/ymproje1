@@ -17,8 +17,26 @@ export function getSlotMinutes() {
   return parsed.length > 0 ? parsed : DEFAULT_SLOT_MINUTES;
 }
 
+function isValidTimezone(timezone) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timezone });
+    return true;
+  } catch (error) {
+    if (error instanceof RangeError) return false;
+    throw error;
+  }
+}
+
 export function getTimezone() {
-  return process.env.SCRAPE_TIMEZONE || DEFAULT_TIMEZONE;
+  const timezone = process.env.SCRAPE_TIMEZONE || DEFAULT_TIMEZONE;
+
+  if (!isValidTimezone(timezone)) {
+    throw new Error(
+      `Invalid SCRAPE_TIMEZONE: "${timezone}". Expected a valid IANA timezone name (for example "${DEFAULT_TIMEZONE}").`
+    );
+  }
+
+  return timezone;
 }
 
 // Returns the UTC offset string (e.g. "+03:00") for `timezone` at `date`.
