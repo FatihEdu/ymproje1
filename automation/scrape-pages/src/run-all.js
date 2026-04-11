@@ -21,6 +21,9 @@ const SCRAPERS = [
   { meta: yapiMeta, scrape: scrapeYapi }
 ];
 
+// Per-scraper network timeout. Override via SCRAPER_TIMEOUT_MS env var (e.g. in GitHub Actions).
+const SCRAPER_TIMEOUT_MS = parseInt(process.env.SCRAPER_TIMEOUT_MS ?? "30000", 10);
+
 async function ensureDir(dirPath) {
   await mkdir(dirPath, { recursive: true });
 }
@@ -193,8 +196,14 @@ function buildIndexHtml() {
 }
 
 async function runOne(scraperDef, ctx) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(new Error(`Scraper timed out after ${SCRAPER_TIMEOUT_MS}ms`)),
+    SCRAPER_TIMEOUT_MS
+  );
+
   try {
-    return await scraperDef.scrape(ctx);
+    return await scraperDef.scrape({ ...ctx, signal: controller.signal });
   } catch (error) {
     return {
       meta: scraperDef.meta,
@@ -205,6 +214,8 @@ async function runOne(scraperDef, ctx) {
         message: error instanceof Error ? error.message : String(error)
       }
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
