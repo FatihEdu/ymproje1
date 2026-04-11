@@ -1,6 +1,5 @@
 // automation/scrape-pages/src/scrapers/yapi.js
 import {
-  fetchJson,
   parseTurkishDateTime,
   sha256Json,
   pickDefined
@@ -42,7 +41,16 @@ function extractProviderUpdatedAt(rows) {
 }
 
 export async function scrape(ctx) {
-  const payload = await fetchJson(meta.sourceUrl, ctx?.signal);
+  const response = await fetch(meta.sourceUrl, {
+    method: "GET",
+    signal: ctx?.signal
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${meta.sourceUrl}`);
+  }
+
+  const payload = await response.json();
   const rows = payload?.d;
 
   if (!Array.isArray(rows)) {

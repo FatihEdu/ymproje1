@@ -1,5 +1,5 @@
 // automation/scrape-pages/src/scrapers/kuveyt.js
-import { fetchJson, sha256Json, pickDefined } from "./_shared.js";
+import { sha256Json, pickDefined } from "./_shared.js";
 
 export const meta = {
   id: "kuveyt",
@@ -29,7 +29,16 @@ function normalizeKuveytRows(rows) {
 }
 
 export async function scrape(ctx) {
-  const rows = await fetchJson(meta.sourceUrl, ctx?.signal);
+  const response = await fetch(meta.sourceUrl, {
+    method: "GET",
+    signal: ctx?.signal
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${meta.sourceUrl}`);
+  }
+
+  const rows = await response.json();
 
   if (!Array.isArray(rows)) {
     throw new Error("Kuveyt response is not an array");

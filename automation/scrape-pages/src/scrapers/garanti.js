@@ -2,7 +2,6 @@
 import {createHash} from 'node:crypto';
 
 import {
-  fetchJsonWithHeaders,
   getMaxIsoDateTimeFromPairs,
   sha256Json
 } from "./_shared.js";
@@ -53,7 +52,17 @@ function normalizeGarantiRows(rows) {
 }
 
 export async function scrape(ctx) {
-  const rows = await fetchJsonWithHeaders(meta.sourceUrl, headers, ctx?.signal);
+  const response = await fetch(meta.sourceUrl, {
+    method: "GET",
+    headers,
+    signal: ctx?.signal
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${meta.sourceUrl}`);
+  }
+
+  const rows = await response.json();
 
   if (!Array.isArray(rows)) {
     throw new Error("Garanti response is not an array");
