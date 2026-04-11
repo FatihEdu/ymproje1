@@ -64,6 +64,8 @@ function shouldMarkNoChange(currentResult, previousResult) {
     return currentUpdated === previousUpdated;
   }
 
+  // Required for cases where provider doesn't give updatedAt, but we can still compare fingerprints
+  // Example: kuveyt.js
   const currentFingerprint = currentResult.providerFingerprint ?? null;
   const previousFingerprint = previousResult.providerFingerprint ?? null;
 
@@ -74,10 +76,21 @@ function shouldMarkNoChange(currentResult, previousResult) {
   return false;
 }
 
+function applyLatestNoChangeFlag(currentResult, previousLatest) {
+  const previousResult = findPreviousResult(previousLatest, currentResult?.meta?.id);
+  const noChange = shouldMarkNoChange(currentResult, previousResult);
+
+  return {
+    ...currentResult,
+    noChange
+  };
+}
+
 function compactMonthlyResult(currentResult, previousLatest) {
   const previousResult = findPreviousResult(previousLatest, currentResult?.meta?.id);
+  const noChange = shouldMarkNoChange(currentResult, previousResult);
 
-  if (!shouldMarkNoChange(currentResult, previousResult)) {
+  if (!noChange) {
     return {
       ...currentResult,
       noChange: false
@@ -131,7 +144,7 @@ function buildIndexHtml() {
         <th>Status</th>
         <th>Provider Updated</th>
         <th>Scraped At</th>
-        <th>Source</th>
+        <th>No Change</th>
       </tr>
     </thead>
     <tbody id="rows"></tbody>
@@ -157,14 +170,14 @@ function buildIndexHtml() {
         const status = result?.ok ? '<span class="ok">ok</span>' : '<span class="err">error</span>';
         const providerUpdatedAt = result?.providerUpdatedAt || "-";
         const scrapedAt = result?.scrapedAt || "-";
-        const sourceUrl = result?.sourceUrl || result?.meta?.sourceUrl || "-";
+        const noChange = result?.ok ? (result?.noChange === true ? "true" : "false") : "-";
 
         tr.innerHTML =
           "<td>" + name + "</td>" +
           "<td>" + status + "</td>" +
           "<td><code>" + providerUpdatedAt + "</code></td>" +
           "<td><code>" + scrapedAt + "</code></td>" +
-          "<td><a href=\\"" + sourceUrl + "\\">link</a></td>";
+          "<td>" + noChange + "</td>";
 
         tbody.appendChild(tr);
       }
@@ -205,28 +218,32 @@ export async function runAll() {
     timezone: timing.timezone
   };
 
-  const results = [];
+  const rawResults = [];
   for (const scraperDef of SCRAPERS) {
-    results.push(await runOne(scraperDef, ctx));
+    rawResults.push(await runOne(scraperDef, ctx));
   }
+
+  const previousLatestPath = path.join(OUTPUT_ROOT, "latest_all.json");
+  const previousLatest = await readJsonIfExists(previousLatestPath);
+
+  const latestResults = rawResults.map((result) =>
+    applyLatestNoChangeFlag(result, previousLatest)
+  );
 
   const latestSnapshot = {
     rev: 1,
     scheduledFor: timing.scheduledFor,
     runStartedAt: timing.runStartedAt,
     timezone: timing.timezone,
-    results
+    results: latestResults
   };
-
-  const previousLatestPath = path.join(OUTPUT_ROOT, "latest_all.json");
-  const previousLatest = await readJsonIfExists(previousLatestPath);
 
   const monthlyEntry = {
     rev: 1,
     scheduledFor: timing.scheduledFor,
     runStartedAt: timing.runStartedAt,
     timezone: timing.timezone,
-    results: results.map((result) => compactMonthlyResult(result, previousLatest))
+    results: rawResults.map((result) => compactMonthlyResult(result, previousLatest))
   };
 
   const currentMonthlyPath = path.join(
