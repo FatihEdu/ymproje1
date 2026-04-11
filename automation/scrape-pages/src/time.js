@@ -8,7 +8,9 @@ export function getSlotMinutes() {
 
   const parsed = raw
     .split(",")
-    .map((x) => Number(x.trim()))
+    .map((x) => x.trim())
+    .filter((x) => /^\d+$/.test(x))
+    .map((x) => Number(x))
     .filter((x) => Number.isInteger(x) && x >= 0 && x <= 59)
     .sort((a, b) => a - b);
 
