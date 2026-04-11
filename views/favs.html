@@ -3,23 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Favoriler – Kur Takip</title>
+  <title>Favorilerim – Kur Takip</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 
-  <!--NAVBAR-->
+  <nav class="navbar">
+    <a href="index.html" class="navbar__brand">Kur Takip</a>
+    <ul class="navbar__links" id="nav-auth-section"></ul>
+  </nav>
 
   <main class="page">
     <div class="card">
-      <h2>Favori Kurlarınız</h2>
-      <p class="mt-3 text-muted">Favori döviz kurlarınız burada görünecek. Özellik yakında eklenecektir.</p>
-      <form action="/logout" method="post" class="mt-5">
-        <!--CSRF-->
-        <button type="submit" class="btn btn-danger">Çıkış Yap</button>
-      </form>
+      <div class="section-header">
+        <h3>⭐ Takip Ettiğim Kurlar</h3>
+        <span id="fav-count" class="text-muted">0 Parite</span>
+      </div>
+
+      <div id="fav-container">
+        <div class="placeholder-box">Favorileriniz güncelleniyor...</div>
+      </div>
+      
+      <div class="mt-5">
+        <a href="index.html" class="btn btn-primary">Tüm Listeye Dön</a>
+      </div>
     </div>
   </main>
 
+  <script type="module" src="/homeDataLoader.js"></script>
+
+  <script type="module">
+    // Parser'ı import etmemiz lazım ki veriyi işleyebilelim
+    import { parseAllProviders } from './scrapeClientParser.js';
+
+    // Parite isimlerini düzeltmek için (homeDataLoader.js ile aynı olmalı)
+    function normalizePair(name) {
+      if (!name) return 'DİĞER';
+      let p = name.toUpperCase().trim().replace('/TL', '').replace('/TRY', '').replace(' (GR)', '');
+      if (p === 'USD') return 'USD/TRY';
+      if (p === 'EUR') return 'EUR/TRY';
+      if (p === 'GBP') return 'GBP/TRY';
+      if (['ALT', 'XAU', 'ALTIN'].includes(p)) return 'GRAM ALTIN';
+      return p.includes('/') ? p : p + '/TRY';
+    }
+
+    async function renderFavorites() {
+      const container = document.getElementById('fav-container');
+      const countEl = document.getElementById('fav-count');
+      
+      const user = localStorage.getItem('currentUser') || 'guest';
+      const key = `favs_${user}`;
+      
+      // 1. Sadece favori isimlerini alıyoruz (Örn: ["USD/TRY", "GRAM ALTIN"])
+      const favPairs = JSON.parse(localStorage.getItem(key) || '[]');
+      countEl.textContent = `${favPairs.length} Parite`;
+
+      if (favPairs.length === 0) {
+        container.innerHTML = `<div class="placeholder-box"><p>Henüz takip ettiğin bir kur yok ŞAMPİYON.</p></div>`;
+        return;
+      }
+
+      try {
+        // 2. Canlı veriyi çekiyoruz (Favoriler her zaman güncel banka fiyatlarını göstermeli)
+        const res = await fetch('https://fatihedu.github.io/ymproje1/latest_all.json');
+        const data = await res.json();
+        const allRows = parseAllProviders(data);
+
+        let html = '';
+
+        // 3. Her favori parite için bir tablo oluştur
+        favPairs.forEach(pairName => {
+          // Canlı veri içinden bu pariteye ait tüm bankaları filtrele
+          const banks = allRows.filter(r => normalizePair(r.pair) === pairName);
+          
+          if (banks.length > 0) {
+            html += `
+              <div class="fav-group-section mt-5" style="border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+                <div class="section-header">
+                  <h4 style="color: var(--brand); font-weight: 800;">📈 ${pairName}</h4>
+                  <button class="btn btn-danger btn-sm" onclick="removePair('${pairName}')">Takibi Bırak</button>
+                </div>
+                <table class="currency-table mt-3">
+                  <thead>
+                    <tr>
+                      <th>Banka</th>
+                      <th>Alış</th>
+                      <th>Satış</th>
+                      <th>Makas</th>
+                      <th style="text-align:right">Saat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${banks.map(b => `
+                      <tr>
+                        <td><strong>${b.providerName}</strong></td>
+                        <td>${b.buy.toFixed(4)}</td>
+                        <td>${b.sell.toFixed(4)}</td>
+                        <td class="text-muted">${(b.sell - b.buy).toFixed(4)}</td>
+                        <td style="text-align:right">${b.time?.split('T')[1]?.substring(0,5) || '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }
+        });
+
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="error-msg">Veriler yüklenirken bir hata oluştu.</div>`;
+      }
+    }
+
+    // --- TAKİBİ BIRAKMA ---
+    window.removePair = function(pairName) {
+      const user = localStorage.getItem('currentUser') || 'guest';
+      const key = `favs_${user}`;
+      let favs = JSON.parse(localStorage.getItem(key) || '[]');
+      
+      favs = favs.filter(p => p !== pairName);
+      localStorage.setItem(key, JSON.stringify(favs));
+      renderFavorites();
+    };
+
+    document.addEventListener('DOMContentLoaded', renderFavorites);
+  </script>
 </body>
 </html>

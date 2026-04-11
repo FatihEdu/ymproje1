@@ -5,18 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Çıkış Yapıldı – Kur Takip</title>
   <link rel="stylesheet" href="/style.css" />
+  <style>
+    .logout-icon svg {
+      width: 80px;
+      height: 80px;
+      color: var(--accent); /* style.css içindeki yeşil renk */
+      margin-bottom: 1.5rem;
+    }
+    .logout-card {
+      animation: fadeInUp 0.5s ease backwards;
+    }
+  </style>
 </head>
 <body>
 
-  <!--NAVBAR-->
+  <nav class="navbar">
+    <a href="index.html" class="navbar__brand">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      Kur Takip
+    </a>
+  </nav>
 
   <div class="auth-wrapper">
-    <div class="auth-card text-center">
-      <h2>Çıkış Yapıldı</h2>
-      <p class="mt-3 text-muted">Başarıyla çıkış yaptınız.</p>
-      <p class="mt-5"><a href="/login" class="btn btn-primary">Tekrar Giriş Yap</a></p>
+    <div class="auth-card logout-card text-center">
+      <div class="logout-status">
+        <div class="logout-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9 12.5l2 2 4-4" />
+          </svg>
+        </div>
+        <h2>Güvenli Çıkış Yapıldı</h2>
+        <p class="logout-description mt-3">Hesabınızdan başarıyla çıkış yaptınız. Favorileriniz bir sonraki girişiniz için güvenle saklandı!</p>
+      </div>
+
+      <div class="logout-actions mt-5">
+        <a href="login.html" class="btn btn-primary btn-block">Tekrar Giriş Yap</a>
+        <a href="index.html" class="btn btn-outline-white btn-block" style="color: var(--brand); border: 1px solid var(--brand); margin-top: 10px;">Ana Sayfaya Dön</a>
+      </div>
+      
+      <p class="logout-tagline mt-5 text-muted" style="font-size: 0.85rem;">Kur Takip ile piyasayı bir <strong>ŞAMPİYON</strong> gibi takip etmeye devam edin.</p>
     </div>
   </div>
+
+  <script>
+    // Sayfa açıldığında oturum verilerini temizle (Kullanıcı listesine ve favorilere DOKUNMA)
+    document.addEventListener('DOMContentLoaded', () => {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('currentUser');
+      console.log("Oturum sonlandırıldı, favoriler ve kullanıcı datası korundu.");
+    });
+  </script>
 
 </body>
 </html>

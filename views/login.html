@@ -4,31 +4,63 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Giriş Yap – Kur Takip</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!--NAVBAR-->
+  <nav class="navbar">
+    <a href="/index.html" class="navbar__brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="white">
+        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+      </svg>
+      Kur Takip
+    </a>
+  </nav>
 
   <div class="auth-wrapper">
     <div class="auth-card">
       <h2>Giriş Yap</h2>
-      <!--ERROR-->
-      <form action="/login" method="POST">
-        <!--CSRF-->
+      
+      <form id="login-form">
         <div class="form-group">
           <label for="username">Kullanıcı Adı</label>
-          <input type="text" id="username" name="username" placeholder="Kullanıcı adınız" required />
+          <input type="text" id="username" name="username" placeholder="Kullanıcı adınız" required autofocus />
         </div>
         <div class="form-group">
           <label for="password">Şifre</label>
           <input type="password" id="password" name="password" placeholder="Şifreniz" required />
         </div>
+        
         <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
       </form>
-      <p class="auth-footer">Hesabınız yok mu? <a href="/register">Kayıt Ol</a></p>
+      
+      <p class="auth-footer">Hesabınız yok mu? <a href="register.html">Kayıt Ol</a></p>
     </div>
   </div>
+
+  <script>
+  document.getElementById('login-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const usernameInput = document.getElementById('username').value.trim();
+    const passwordInput = document.getElementById('password').value;
+
+    // 1. Kayıtlı kullanıcıları getir
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+    // 2. Eşleşme kontrolü (Kullanıcı adı VE şifre doğru mu?)
+    const userFound = users.find(u => u.username === usernameInput && u.password === passwordInput);
+
+    if (userFound) {
+      // Doğruysa oturum aç
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('currentUser', usernameInput); // Kimin girdiğini not et
+      window.location.href = 'index.html';
+    } else {
+      // Yanlışsa kapıdan çevir
+      alert("HATA: Kullanıcı adı veya şifre yanlış! Lütfen tekrar dene.");
+    }
+  });
+</script>
 
 </body>
 </html>
