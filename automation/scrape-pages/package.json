@@ -5,5 +5,8 @@
   "scripts": {
     "scrape": "node src/run-all.js",
     "compress-monthlies": "node src/compress-monthlies.js"
+  },
+  "dependencies": {
+    "json-stable-stringify": "^1.1.1"
   }
 }
