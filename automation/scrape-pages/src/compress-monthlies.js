@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { mkdir, readdir, readFile, writeFile, rm } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 
+import { getRunTiming, getMonthKey } from "./time.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -10,19 +12,22 @@ const OUTPUT_ROOT =
   process.env.SCRAPE_OUTPUT_ROOT ||
   path.resolve(__dirname, "../.generated/site");
 
-function getCurrentMonthKey(now = new Date()) {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
 async function ensureDir(dirPath) {
   await mkdir(dirPath, { recursive: true });
 }
 
 export async function compressMonthlies() {
   const currentDir = path.join(OUTPUT_ROOT, "monthlies", "current");
-  const activeMonthKey = getCurrentMonthKey();
+
+  // Use the same timing logic as run-all.js so both scripts agree on which
+  // month is "active". Slot rounding can push scheduledDate into the previous
+  // month during the early minutes of a new month, so we protect both the
+  // slot-rounded month (what run-all.js uses) and the current calendar month
+  // (wall-clock Istanbul time) to avoid compressing a file that runAll() still
+  // needs to append to.
+  const timing = getRunTiming();
+  const slotMonthKey = getMonthKey(timing.scheduledDate);
+  const calendarMonthKey = getMonthKey(new Date());
 
   let files = [];
   try {
@@ -40,7 +45,7 @@ export async function compressMonthlies() {
     if (!fileName.endsWith(".jsonl")) continue;
 
     const monthKey = fileName.replace(/\.jsonl$/, "");
-    if (monthKey === activeMonthKey) continue;
+    if (monthKey === slotMonthKey || monthKey === calendarMonthKey) continue;
 
     const [year, month] = monthKey.split("-");
     const sourcePath = path.join(currentDir, fileName);
