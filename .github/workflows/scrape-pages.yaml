@@ -150,7 +150,7 @@ jobs:
         shell: bash
         run: |
           git add -A
-          if git diff --cached --quiet; then
+          if [ -z "$(git status --porcelain)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No changes detected."
           else
