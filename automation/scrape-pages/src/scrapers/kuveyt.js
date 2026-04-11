@@ -40,7 +40,7 @@ export async function scrape(ctx) {
   const rows = await response.json();
 
   if (!Array.isArray(rows)) {
-    throw new Error("Kuveyt response is not an array");
+    throw new TypeError("Kuveyt response is not an array");
   }
 
   const data = normalizeKuveytRows(rows);

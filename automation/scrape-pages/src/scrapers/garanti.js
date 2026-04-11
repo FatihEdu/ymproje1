@@ -64,7 +64,7 @@ export async function scrape(ctx) {
   const rows = await response.json();
 
   if (!Array.isArray(rows)) {
-    throw new Error("Garanti response is not an array");
+    throw new TypeError("Garanti response is not an array");
   }
 
   const data = normalizeGarantiRows(rows);
