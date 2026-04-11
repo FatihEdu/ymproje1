@@ -1,0 +1,124 @@
+name: Scrape Pages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/scrape-pages.yml"
+      - "automation/scrape-pages/**"
+  workflow_dispatch:
+  schedule:
+    - cron: "7 * * * *"
+      timezone: "Europe/Istanbul"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scrape-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch contents
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install scraper module deps
+        working-directory: automation/scrape-pages
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Prepare gh-pages worktree
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git ls-remote --exit-code --heads "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages > /dev/null 2>&1; then
+            git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages-worktree
+          else
+            mkdir gh-pages-worktree
+            cd gh-pages-worktree
+            git init
+            git checkout --orphan gh-pages
+          fi
+
+      - name: Prepare temporary output directory for PR validation
+        if: github.event_name == 'pull_request'
+        run: mkdir -p gh-pages-worktree
+
+      - name: Run scrapers
+        working-directory: automation/scrape-pages
+        env:
+          SCRAPE_OUTPUT_ROOT: ${{ github.workspace }}/gh-pages-worktree
+          SCRAPE_TIMEZONE: Europe/Istanbul
+          SCRAPE_SLOT_MINUTES: "7"
+        run: npm run scrape
+
+      - name: Ensure Pages marker
+        if: github.event_name != 'pull_request'
+        run: touch gh-pages-worktree/.nojekyll
+
+      - name: Commit and push gh-pages data
+        if: github.event_name != 'pull_request'
+        working-directory: gh-pages-worktree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          else
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(scrape-pages): update data"
+          git push origin HEAD:gh-pages
+
+      - name: Remove git metadata before Pages artifact upload
+        if: github.event_name != 'pull_request'
+        run: rm -rf gh-pages-worktree/.git
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages-worktree
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
