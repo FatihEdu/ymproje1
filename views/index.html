@@ -64,10 +64,28 @@
       <div class="card">
         <div class="section-header">
           <h3>Kur Listesi</h3>
+          <div class="month-loader">
+            <input type="month" id="month-input" />
+            <button id="month-load-btn" class="btn btn-primary btn-sm" type="button">Ay Yukle</button>
+          </div>
         </div>
-        <div class="placeholder-box">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-          <span>Kur listesi yakında eklenecek</span>
+        <p id="currency-list-meta" class="text-muted mt-3">Veri bekleniyor...</p>
+        <div class="currency-table-wrap mt-3">
+          <table class="currency-table">
+            <thead>
+              <tr>
+                <th>Parite</th>
+                <th>Banka</th>
+                <th>Alis</th>
+                <th>Satis</th>
+                <th>Parite</th>
+                <th>Makas</th>
+                <th>Degisim %</th>
+                <th>Zaman</th>
+              </tr>
+            </thead>
+            <tbody id="currency-list-body"></tbody>
+          </table>
         </div>
       </div>
 
@@ -78,9 +96,14 @@
     &copy; <span id="year"></span> Kur Takip
   </footer>
 
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
+  <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite" aria-busy="true">
+    <div class="loading-popup">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="loading-message">Yukleniyor...</p>
+    </div>
+  </div>
+
+  <script type="module" src="/homeDataLoader.js"></script>
 
 </body>
 </html>
