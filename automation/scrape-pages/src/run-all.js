@@ -185,6 +185,13 @@ function buildIndexHtml() {
 
     async function main() {
       const res = await fetch("./latest_all.json", { cache: "no-store" });
+      if (!res.ok) {
+        const errorText = (await res.text()).trim();
+        const errorDetails = errorText ? " - " + errorText.slice(0, 500) : "";
+        throw new Error(
+          "Failed to fetch ./latest_all.json: " + res.status + " " + res.statusText + errorDetails
+        );
+      }
       const latest = await res.json();
 
       const meta = document.getElementById("meta");
