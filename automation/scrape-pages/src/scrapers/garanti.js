@@ -1,4 +1,4 @@
-import {createHash} from 'node:crypto';
+import {createHash} from "node:crypto";
 
 import {
   getMaxIsoDateTimeFromPairs,
@@ -13,7 +13,7 @@ export const meta = {
     "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
 };
 
-const md5 = (str) => createHash('md5').update(str).digest('hex');
+const md5 = (str) => createHash("md5").update(str).digest("hex");
 
 const headers = {
   "Accept": "application/json",
