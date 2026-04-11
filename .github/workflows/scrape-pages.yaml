@@ -11,21 +11,54 @@ on:
     - cron: "7 * * * *"
       timezone: "Europe/Istanbul"
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 concurrency:
   group: scrape-pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
+  validate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout main branch contents
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install scraper module deps
+        working-directory: automation/scrape-pages
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Prepare temporary output directory
+        run: mkdir -p gh-pages-worktree
+
+      - name: Run scrapers
+        working-directory: automation/scrape-pages
+        env:
+          SCRAPE_OUTPUT_ROOT: ${{ github.workspace }}/gh-pages-worktree
+          SCRAPE_TIMEZONE: Europe/Istanbul
+          SCRAPE_SLOT_MINUTES: "7"
+        run: npm run scrape
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -43,7 +76,6 @@ jobs:
           fi
 
       - name: Prepare gh-pages worktree
-        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -56,10 +88,6 @@ jobs:
             git checkout --orphan gh-pages
           fi
 
-      - name: Prepare temporary output directory for PR validation
-        if: github.event_name == 'pull_request'
-        run: mkdir -p gh-pages-worktree
-
       - name: Run scrapers
         working-directory: automation/scrape-pages
         env:
@@ -69,11 +97,9 @@ jobs:
         run: npm run scrape
 
       - name: Ensure Pages marker
-        if: github.event_name != 'pull_request'
         run: touch gh-pages-worktree/.nojekyll
 
       - name: Commit and push gh-pages data
-        if: github.event_name != 'pull_request'
         working-directory: gh-pages-worktree
         env:
           GH_TOKEN: ${{ github.token }}
@@ -98,18 +124,16 @@ jobs:
           git push origin HEAD:gh-pages
 
       - name: Remove git metadata before Pages artifact upload
-        if: github.event_name != 'pull_request'
         run: rm -rf gh-pages-worktree/.git
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: gh-pages-worktree
 
   deploy:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: publish
     runs-on: ubuntu-latest
     permissions:
       pages: write
