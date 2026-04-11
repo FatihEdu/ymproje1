@@ -1,0 +1,8 @@
+{
+  "name": "scrape-pages",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node src/run-all.js"
+  }
+}
