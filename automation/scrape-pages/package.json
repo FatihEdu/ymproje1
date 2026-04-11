@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "scrape": "node src/run-all.js"
+    "scrape": "node src/run-all.js",
+    "compress-monthlies": "node src/compress-monthlies.js"
   }
 }
