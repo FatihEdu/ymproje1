@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
+import stringify from "json-stable-stringify";
 
 
 export function sha256Json(value) {
   return createHash("sha256")
-    .update(JSON.stringify(value))
+    .update(stringify(value))
     .digest("hex");
 }
 
