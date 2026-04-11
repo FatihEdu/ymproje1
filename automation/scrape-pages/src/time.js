@@ -48,7 +48,7 @@ function getOffsetString(date, timezone) {
   // `longOffset` returns values like "GMT+03:00", "GMT-05:30", or "GMT" for UTC.
   const raw = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
   if (raw === "GMT") return "+00:00";
-  // Captures sign, two-digit hour, and optional two-digit minute (e.g. "+03:00" or "+05:30").
+  // Captures sign, two-digit hour, and required two-digit minute (e.g. "+03:00" or "+05:30").
   const match = raw.match(/GMT([+-])(\d{2}):(\d{2})/);
   if (!match) return "+00:00";
   return `${match[1]}${match[2]}:${match[3]}`;
