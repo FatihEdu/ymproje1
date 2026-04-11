@@ -13,6 +13,20 @@ export async function fetchJson(url, signal) {
   return response.json();
 }
 
+export async function fetchJsonWithHeaders(url, headers, signal) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers,
+    signal
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${url}`);
+  }
+
+  return response.json();
+}
+
 export function sha256Json(value) {
   return createHash("sha256")
     .update(JSON.stringify(value))
