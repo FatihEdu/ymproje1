@@ -160,40 +160,71 @@ function buildIndexHtml() {
   </table>
 
   <script>
+    function appendMetaItem(container, label, value) {
+      const p = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = label + ":";
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(" " + (value || "-")));
+      container.appendChild(p);
+    }
+
+    function appendCell(row, text) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      row.appendChild(td);
+    }
+
+    function appendCodeCell(row, text) {
+      const td = document.createElement("td");
+      const code = document.createElement("code");
+      code.textContent = text;
+      td.appendChild(code);
+      row.appendChild(td);
+    }
+
     async function main() {
       const res = await fetch("./latest_all.json", { cache: "no-store" });
       const latest = await res.json();
 
-      document.getElementById("meta").innerHTML =
-        "<p><strong>scheduledFor:</strong> " + latest.scheduledFor + "</p>" +
-        "<p><strong>runStartedAt:</strong> " + latest.runStartedAt + "</p>" +
-        "<p><strong>timezone:</strong> " + latest.timezone + "</p>";
+      const meta = document.getElementById("meta");
+      meta.textContent = "";
+      appendMetaItem(meta, "scheduledFor", latest.scheduledFor);
+      appendMetaItem(meta, "runStartedAt", latest.runStartedAt);
+      appendMetaItem(meta, "timezone", latest.timezone);
 
       const tbody = document.getElementById("rows");
-      tbody.innerHTML = "";
+      tbody.textContent = "";
 
       for (const result of latest.results || []) {
         const tr = document.createElement("tr");
 
         const name = result?.meta?.name || result?.meta?.id || "unknown";
-        const status = result?.ok ? '<span class="ok">ok</span>' : '<span class="err">error</span>';
         const providerUpdatedAt = result?.providerUpdatedAt || "-";
         const scrapedAt = result?.scrapedAt || "-";
         const noChange = result?.ok ? (result?.noChange === true ? "true" : "false") : "-";
 
-        tr.innerHTML =
-          "<td>" + name + "</td>" +
-          "<td>" + status + "</td>" +
-          "<td><code>" + providerUpdatedAt + "</code></td>" +
-          "<td><code>" + scrapedAt + "</code></td>" +
-          "<td>" + noChange + "</td>";
+        appendCell(tr, name);
+
+        const statusTd = document.createElement("td");
+        const statusSpan = document.createElement("span");
+        statusSpan.className = result?.ok ? "ok" : "err";
+        statusSpan.textContent = result?.ok ? "ok" : "error";
+        statusTd.appendChild(statusSpan);
+        tr.appendChild(statusTd);
+
+        appendCodeCell(tr, providerUpdatedAt);
+        appendCodeCell(tr, scrapedAt);
+        appendCell(tr, noChange);
 
         tbody.appendChild(tr);
       }
     }
 
     main().catch((err) => {
-      document.body.insertAdjacentHTML("beforeend", "<pre>" + String(err) + "</pre>");
+      const pre = document.createElement("pre");
+      pre.textContent = String(err);
+      document.body.appendChild(pre);
     });
   </script>
 </body>
