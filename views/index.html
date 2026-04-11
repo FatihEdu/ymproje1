@@ -3,26 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kur Takip – Ana Sayfa</title>
-  <link rel="stylesheet" href="/style.css" />
+  <title>Kur Takip – Profesyonel Döviz Portalı</title>
+  
+  <link rel="stylesheet" href="style.css" />
+  
+  <style>
+    /* Tablo içinde favori yıldızı için ek stil */
+    .fav-btn {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      color: #94a3b8; /* Varsayılan gri */
+    }
+    .fav-btn.active {
+      color: #f59e0b; /* Altın sarısı */
+      transform: scale(1.2);
+    }
+    .pair-group-header td {
+      background: var(--brand-light) !important;
+      color: var(--brand-dark);
+      font-weight: 800;
+      padding: 12px 20px !important;
+      font-size: 0.95rem;
+      border-left: 5px solid var(--brand);
+    }
+    .search-input {
+      width: 100%;
+      max-width: 300px;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
+  </style>
 </head>
-<body>
+<body data-theme="light">
 
-  <!--NAVBAR-->
+  <nav class="navbar">
+    <a href="index.html" class="navbar__brand">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      Kur Takip
+    </a>
+    <ul class="navbar__links" id="nav-auth-section">
+      </ul>
+  </nav>
 
   <main class="page">
-
-    <!-- Hero -->
     <section class="hero">
-      <h1 class="hero__title">Döviz Kurlarını Takip Edin</h1>
-      <p class="hero__sub">Güncel döviz kurlarını, grafikleri ve favori paritelerinizi tek ekranda görüntüleyin.</p>
-      <div class="hero__actions">
-        <a href="/register" class="btn btn-white">Ücretsiz Kayıt Ol</a>
-        <a href="/login"    class="btn btn-outline-white">Giriş Yap</a>
+      <div class="hero__content">
+        <h1 class="hero__title">Piyasayı ŞAMPİYON Gibi Takip Et</h1>
+        <p class="hero__sub">Tüm bankaların canlı döviz kurlarını karşılaştır, makas aralıklarını incele ve favori paritelerini listene ekle.</p>
+        <div class="hero__actions" id="hero-auth-actions">
+          </div>
       </div>
     </section>
 
-    <!-- Summary cards (populated by future issues) -->
     <div class="summary-grid">
       <div class="summary-card">
         <span class="summary-card__label">USD/TRY</span>
@@ -40,70 +79,64 @@
         <span class="summary-card__change" id="chg-gbp"></span>
       </div>
       <div class="summary-card">
-        <span class="summary-card__label">ALTIN (gr)</span>
+        <span class="summary-card__label">XAU/TRY (Gram Altın)</span>
         <span class="summary-card__value" id="val-gold">–</span>
         <span class="summary-card__change" id="chg-gold"></span>
       </div>
     </div>
 
-    <!-- Main content grid -->
     <div class="home-grid">
-
-      <!-- Chart placeholder -->
       <div class="card">
         <div class="section-header">
           <h3>Kur Grafiği</h3>
         </div>
         <div class="placeholder-box">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3zm4 10l3-3 3 3 5-5 1.4 1.4-6.4 6.4-3-3-2 2L7 13z"/></svg>
-          <span>Grafik yakında eklenecek</span>
+          <span>Grafik analizi yakında aktif olacak</span>
         </div>
       </div>
 
-      <!-- Currency list placeholder -->
       <div class="card">
         <div class="section-header">
-          <h3>Kur Listesi</h3>
-          <div class="month-loader">
-            <input type="month" id="month-input" />
-            <button id="month-load-btn" class="btn btn-primary btn-sm" type="button">Ay Yukle</button>
-          </div>
+          <h3>Banka Karşılaştırmalı Liste</h3>
+          <input type="text" id="table-search" class="search-input" placeholder="Banka ara..." />
         </div>
-        <p id="currency-list-meta" class="text-muted mt-3">Veri bekleniyor...</p>
+        
+        <p id="currency-list-meta" class="text-muted mt-3">Güncel veriler hazırlanıyor...</p>
+        
         <div class="currency-table-wrap mt-3">
           <table class="currency-table">
             <thead>
               <tr>
-                <th>Parite</th>
+                <th style="width: 60px; text-align: center;">⭐</th>
                 <th>Banka</th>
-                <th>Alis</th>
-                <th>Satis</th>
-                <th>Parite</th>
+                <th>Alış</th>
+                <th>Satış</th>
+                <th>Orta Kur</th>
                 <th>Makas</th>
-                <th>Degisim %</th>
-                <th>Zaman</th>
+                <th>Değişim %</th>
+                <th style="text-align:right">Saat</th>
               </tr>
             </thead>
-            <tbody id="currency-list-body"></tbody>
+            <tbody id="currency-list-body">
+              </tbody>
           </table>
         </div>
       </div>
-
     </div>
   </main>
 
   <footer class="footer">
-    &copy; <span id="year"></span> Kur Takip
+    &copy; <span id="year"></span> Kur Takip Projesi | Tüm hakları saklıdır.
   </footer>
 
-  <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite" aria-busy="true">
+  <div id="loading-overlay" class="loading-overlay hidden">
     <div class="loading-popup">
-      <div class="spinner" aria-hidden="true"></div>
-      <p id="loading-message">Yukleniyor...</p>
+      <div class="spinner"></div>
+      <p id="loading-message">Veriler çekiliyor...</p>
     </div>
   </div>
 
-  <script type="module" src="/homeDataLoader.js"></script>
-
+  <script type="module" src="homeDataLoader.js"></script>
 </body>
 </html>

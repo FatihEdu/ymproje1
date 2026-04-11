@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 // Serve static assets (CSS, JS, images, …)
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(express.static(path.join(__dirname, 'views')));
+
 // Middleware to parse form data
 app.use(bodyMiddleware());
 

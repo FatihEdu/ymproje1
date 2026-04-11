@@ -4,30 +4,49 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kayıt Ol – Kur Takip</title>
-  <link rel="stylesheet" href="/style.css" />
-</head>
+  <link rel="stylesheet" href="/style.css" /> </head>
 <body>
-
-  <!--NAVBAR-->
 
   <div class="auth-wrapper">
     <div class="auth-card">
-      <h2>Kayıt Ol</h2>
-      <form action="/register" method="POST">
-        <!--CSRF-->
+      <h2>Yeni Hesap Oluştur</h2>
+      <form id="register-form">
         <div class="form-group">
           <label for="username">Kullanıcı Adı</label>
-          <input type="text" id="username" name="username" placeholder="Kullanıcı adınız" required />
+          <input type="text" id="username" placeholder="Kullanıcı adınız" required />
         </div>
         <div class="form-group">
           <label for="password">Şifre</label>
-          <input type="password" id="password" name="password" placeholder="Şifreniz" required />
+          <input type="password" id="password" placeholder="Şifreniz" required />
         </div>
         <button type="submit" class="btn btn-primary btn-block">Kayıt Ol</button>
       </form>
-      <p class="auth-footer">Zaten hesabınız var mı? <a href="/login">Giriş Yap</a></p>
+      <p class="auth-footer">Zaten hesabınız var mı? <a href="/login.html">Giriş Yap</a></p>
     </div>
   </div>
 
+  <script>
+  document.getElementById('register-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    // 1. Mevcut kullanıcı listesini al (yoksa boş dizi)
+    let users = JSON.parse(localStorage.getItem('users') || '[]');
+
+    // 2. Kullanıcı adı kontrolü
+    if (users.some(u => u.username === username)) {
+      alert("Bu kullanıcı adı zaten alınmış ŞAMPİYON!");
+      return;
+    }
+
+    // 3. Yeni kullanıcıyı ekle ve kaydet
+    users.push({ username, password });
+    localStorage.setItem('users', JSON.stringify(users));
+
+    alert("Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun.");
+    window.location.href = 'login.html';
+  });
+</script>
 </body>
 </html>
