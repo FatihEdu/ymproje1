@@ -255,7 +255,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   runAll()
     .then(({ latestSnapshot, currentMonthlyPath, outputRoot }) => {
       console.log(JSON.stringify(latestSnapshot, null, 2));
-      console.log("\\nWritten to:");
+      console.log("\nWritten to:");
       console.log(`- ${path.join(outputRoot, "latest_all.json")}`);
       console.log(`- ${currentMonthlyPath}`);
       console.log(`- ${path.join(outputRoot, "index.json")}`);
