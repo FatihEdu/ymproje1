@@ -22,7 +22,13 @@ const SCRAPERS = [
 ];
 
 // Per-scraper network timeout. Override via SCRAPER_TIMEOUT_MS env var (e.g. in GitHub Actions).
-const SCRAPER_TIMEOUT_MS = parseInt(process.env.SCRAPER_TIMEOUT_MS ?? "30000", 10);
+const parsedScraperTimeoutMs = parseInt(process.env.SCRAPER_TIMEOUT_MS ?? "30000", 10);
+const SCRAPER_TIMEOUT_MS =
+  Number.isFinite(parsedScraperTimeoutMs) &&
+  Number.isInteger(parsedScraperTimeoutMs) &&
+  parsedScraperTimeoutMs > 0
+    ? parsedScraperTimeoutMs
+    : 30000;
 
 async function ensureDir(dirPath) {
   await mkdir(dirPath, { recursive: true });
