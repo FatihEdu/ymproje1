@@ -83,6 +83,12 @@ function getBestPerPair(rows, pairCandidates) {
   return { parity, changePct };
 }
 
+const SELECTED_PAIRS = ['USD/TRY', 'EUR/TRY', 'GBP/TRY', 'XAU/TRY'];
+
+function filterVisibleRows(rows) {
+  return rows.filter((row) => SELECTED_PAIRS.includes(row.pair));
+}
+
 function updateSummaryCards(rows) {
   const usd = getBestPerPair(rows, ['USD/TRY']);
   const eur = getBestPerPair(rows, ['EUR/TRY']);
@@ -108,24 +114,51 @@ function renderCurrencyList(rows) {
 
   body.textContent = '';
 
-  const sorted = [...rows].sort((a, b) => {
-    if (a.pair === b.pair) return a.providerId.localeCompare(b.providerId);
-    return a.pair.localeCompare(b.pair);
-  });
+  if (!rows.length) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = '<td colspan="7" class="text-center text-muted">Kur verisi bulunamadı.</td>';
+    body.appendChild(emptyRow);
+    return;
+  }
 
-  for (const row of sorted) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.pair}</td>
-      <td>${row.providerName}</td>
-      <td>${formatNumber(row.buy)}</td>
-      <td>${formatNumber(row.sell)}</td>
-      <td>${formatNumber(row.parity)}</td>
-      <td>${formatNumber(row.spread)}</td>
-      <td>${formatPct(row.changePct)}</td>
-      <td>${row.time || '-'}</td>
+  const groups = rows.reduce((map, row) => {
+    if (!map[row.pair]) map[row.pair] = [];
+    map[row.pair].push(row);
+    return map;
+  }, {});
+
+  const sortedPairs = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+
+  for (const pair of sortedPairs) {
+    const groupRows = groups[pair].sort((a, b) => a.providerName.localeCompare(b.providerName));
+    const displayPair = pair === 'XAU/TRY' ? 'ALTIN' : pair;
+
+    const headerRow = document.createElement('tr');
+    headerRow.className = 'currency-group-row';
+    headerRow.innerHTML = `
+      <td colspan="7">
+        <div class="currency-group">
+          <span class="currency-group__name">${displayPair}</span>
+          <span class="currency-group__info">${groupRows.length} banka</span>
+        </div>
+      </td>
     `;
-    body.appendChild(tr);
+    body.appendChild(headerRow);
+
+    for (const row of groupRows) {
+      const changeClass = row.changePct > 0 ? 'up' : row.changePct < 0 ? 'down' : '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.providerName}</td>
+        <td>${formatNumber(row.buy)}</td>
+        <td>${formatNumber(row.sell)}</td>
+        <td>${formatNumber(row.parity)}</td>
+        <td>${formatNumber(row.spread)}</td>
+        <td class="${changeClass}">${formatPct(row.changePct)}</td>
+        <td>${row.time || '-'}</td>
+      `;
+      body.appendChild(tr);
+    }
   }
 }
 
@@ -174,7 +207,7 @@ export async function loadLatestData() {
   try {
     const latestUrl = `${DATA_BASE_URL}/latest_all.json`;
     const latest = await fetchJson(latestUrl);
-    const rows = parseAllProviders(latest);
+    const rows = filterVisibleRows(parseAllProviders(latest));
 
     updateSummaryCards(rows);
     renderCurrencyList(rows);
@@ -215,7 +248,7 @@ export async function loadMonthlyData(monthKey) {
     }
 
     const latestEntry = entries[entries.length - 1];
-    const rows = parseAllProviders(latestEntry);
+    const rows = filterVisibleRows(parseAllProviders(latestEntry));
 
     updateSummaryCards(rows);
     renderCurrencyList(rows);
