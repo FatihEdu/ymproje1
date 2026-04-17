@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-04-18T01:07:00+03:00",
-  "runStartedAt": "2026-04-18T01:57:25+03:00",
+  "scheduledFor": "2026-04-18T02:07:00+03:00",
+  "runStartedAt": "2026-04-18T02:53:07+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,7 +12,7 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-04-17T22:57:27.708Z",
+      "scrapedAt": "2026-04-17T23:53:08.630Z",
       "providerUpdatedAt": "2026-04-17T21:52:42+03:00",
       "providerFingerprint": "2015290f94a2962381c8386b30416233bffe15ba764d40f9e64870e5fd0bc9e5",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
@@ -476,7 +476,7 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-04-17T22:57:28.562Z",
+      "scrapedAt": "2026-04-17T23:53:09.318Z",
       "providerUpdatedAt": null,
       "providerFingerprint": "aa532ab8625d89e1ddfa3f13071904baacf5dcbce2d18e95e8368799efaba60e",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
@@ -538,7 +538,7 @@
           "changeRateNegative": true
         }
       },
-      "noChange": false
+      "noChange": true
     },
     {
       "meta": {
@@ -547,36 +547,11 @@
         "name": "Yapı Kredi",
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
-      "ok": true,
-      "scrapedAt": "2026-04-17T22:57:30.463Z",
-      "providerUpdatedAt": "2026-04-18T01:55:23+03:00",
-      "providerFingerprint": "de70c17f5824b8ece6442f41d104a02f7c6b41787e53c38e1324bb70c5a53389",
-      "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
-      "data": {
-        "EUR": {
-          "buy": 51.3259659,
-          "sell": 54.0011139,
-          "dailyStatus": "down",
-          "change": -0.2898815,
-          "previousDayBuyingPrice": 52.2370071,
-          "previousDaySellingPrice": 53.3962822
-        },
-        "USD": {
-          "buy": 43.4980736,
-          "sell": 46.0429,
-          "dailyStatus": "up",
-          "change": 0.123527817,
-          "previousDayBuyingPrice": 44.2023125,
-          "previousDaySellingPrice": 45.2281952
-        },
-        "XAU": {
-          "buy": 6788.62158,
-          "sell": 7250.964,
-          "dailyStatus": "up",
-          "change": 0.440228522,
-          "previousDayBuyingPrice": 6882.6167,
-          "previousDaySellingPrice": 7095.43359
-        }
+      "ok": false,
+      "scrapedAt": "2026-04-17T23:53:19.320Z",
+      "providerUpdatedAt": null,
+      "error": {
+        "message": "fetch failed"
       },
       "noChange": false
     }
