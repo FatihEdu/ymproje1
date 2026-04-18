@@ -532,6 +532,34 @@ a:hover { text-decoration: underline; }
   color: #94a3b8;
 }
 
+.fav-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .15s ease, color .15s ease, background .15s ease;
+}
+
+.fav-btn:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  transform: scale(1.06);
+}
+
+.fav-btn.is-active {
+  color: #f59e0b;
+}
+
+.fav-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
 .currency-group-row td {
   background: #eef4ff;
   color: #1d4ed8;
@@ -554,10 +582,6 @@ a:hover { text-decoration: underline; }
   background: #f8fafc;
 }
 
-.mid-rate {
-  font-weight: 700;
-  color: #111827;
-}
 
 .change-positive {
   color: #16a34a;

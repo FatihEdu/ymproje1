@@ -1,3 +1,28 @@
+function formatRelativeTime(dateString) {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  if (isNaN(d)) return '-';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'şimdi';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} dk önce`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} sa önce`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} gün önce`;
+  // 7 gün ve fazlası için kısa tarih göster
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+function formatShortDateTime(dateString) {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  if (isNaN(d)) return '-';
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 import { parseAllProviders } from './scrapeClientParser.js';
 
 const DATA_BASE_URL = globalThis.__SCRAPE_BASE_URL__ || 'https://fatihedu.github.io/ymproje1';
@@ -84,6 +109,68 @@ function getBestPerPair(rows, pairCandidates) {
 }
 
 const SELECTED_PAIRS = ['USD/TRY', 'EUR/TRY', 'GBP/TRY', 'XAU/TRY'];
+let isLoggedIn = false;
+let csrfToken = '';
+let favoriteSet = new Set();
+
+function favoriteKey(pair, providerName) {
+  return `${pair}::${providerName}`;
+}
+
+async function initAuthState() {
+  try {
+    const auth = await fetchJson('/auth/me');
+    isLoggedIn = Boolean(auth?.user);
+  } catch {
+    isLoggedIn = false;
+  }
+}
+
+async function ensureCsrfToken() {
+  if (csrfToken) return csrfToken;
+  const data = await fetchJson('/csrf-token');
+  csrfToken = data?.csrfToken || '';
+  return csrfToken;
+}
+
+async function loadFavorites() {
+  if (!isLoggedIn) {
+    favoriteSet = new Set();
+    return;
+  }
+
+  try {
+    const data = await fetchJson('/api/favorites');
+    const list = Array.isArray(data?.favorites) ? data.favorites : [];
+    favoriteSet = new Set(list.map((f) => favoriteKey(f.pair, f.providerName)));
+  } catch {
+    favoriteSet = new Set();
+  }
+}
+
+async function updateFavorite(pair, providerName, shouldAdd) {
+  const token = await ensureCsrfToken();
+  const body = new URLSearchParams({ pair, providerName }).toString();
+
+  const url = shouldAdd ? '/api/favorites' : '/api/favorites/remove';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'x-csrf-token': token,
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data?.favorites) ? data.favorites : [];
+  favoriteSet = new Set(list.map((f) => favoriteKey(f.pair, f.providerName)));
+}
 
 function filterVisibleRows(rows) {
   return rows.filter((row) => SELECTED_PAIRS.includes(row.pair));
@@ -139,7 +226,6 @@ function renderCurrencyList(rows) {
       <td colspan="7">
         <div class="currency-group">
           <span class="currency-group__name">${displayPair}</span>
-          <span class="currency-group__info">${groupRows.length} banka</span>
         </div>
       </td>
     `;
@@ -147,18 +233,43 @@ function renderCurrencyList(rows) {
 
     for (const row of groupRows) {
       const changeClass = row.changePct > 0 ? 'up' : row.changePct < 0 ? 'down' : '';
+      const key = favoriteKey(row.pair, row.providerName);
+      const isFav = favoriteSet.has(key);
       const tr = document.createElement('tr');
+      tr.className = 'bank-row';
       tr.innerHTML = `
+        <td class="col-fav">
+          ${isLoggedIn ? `<button class="fav-btn ${isFav ? 'is-active' : ''}" type="button" data-pair="${row.pair}" data-provider="${row.providerName}" aria-label="Favori">★</button>` : ''}
+        </td>
         <td>${row.providerName}</td>
         <td>${formatNumber(row.buy)}</td>
         <td>${formatNumber(row.sell)}</td>
-        <td>${formatNumber(row.parity)}</td>
         <td>${formatNumber(row.spread)}</td>
         <td class="${changeClass}">${formatPct(row.changePct)}</td>
-        <td>${row.time || '-'}</td>
+        <td>${formatShortDateTime(row.time)}</td>
       `;
       body.appendChild(tr);
     }
+  }
+
+  if (isLoggedIn) {
+    body.querySelectorAll('.fav-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const pair = btn.dataset.pair;
+        const providerName = btn.dataset.provider;
+        const currentlyFav = favoriteSet.has(favoriteKey(pair, providerName));
+        btn.disabled = true;
+        try {
+          await updateFavorite(pair, providerName, !currentlyFav);
+          renderCurrencyList(rows);
+        } catch (error) {
+          console.error(error);
+          renderMeta(`Favori guncellenemedi: ${error.message}`);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
   }
 }
 
@@ -212,7 +323,7 @@ export async function loadLatestData() {
     updateSummaryCards(rows);
     renderCurrencyList(rows);
 
-    renderMeta(`Son guncelleme: ${latest.runStartedAt || '-'} | Kayit sayisi: ${rows.length}`);
+    renderMeta(`Son guncelleme: ${formatShortDateTime(latest.runStartedAt)} | Kayit sayisi: ${rows.length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Son veriler yuklenemedi: ${error.message}`);
@@ -288,7 +399,11 @@ function setCurrentYear() {
 function init() {
   setCurrentYear();
   wireMonthLoader();
-  loadLatestData();
+  initAuthState()
+    .then(loadFavorites)
+    .finally(() => {
+      loadLatestData();
+    });
 }
 
 if (typeof document !== 'undefined') {
