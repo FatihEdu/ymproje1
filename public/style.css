@@ -317,11 +317,48 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
+.range-loader {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.range-label {
+  font-size: .8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .month-loader input[type="month"] {
   padding: .45rem .55rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: .85rem;
+}
+
+.range-loader input[type="month"],
+.range-loader input[type="date"],
+.range-loader select {
+  padding: .45rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .85rem;
+  background: #fff;
+}
+
+.chart-wrap {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: .75rem;
+}
+
+#range-chart {
+  width: 100%;
+  height: 280px;
+  display: block;
 }
 
 .currency-table-wrap {
@@ -597,6 +634,25 @@ a:hover { text-decoration: underline; }
   color: #6b7280;
   font-weight: 600;
 }
+
+/* Sortable header */
+.th-sortable { cursor: pointer; user-select: none; }
+.th-sortable .sort-indicator { display: none; }
+
+/* explicit sort button */
+.sort-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: .35rem;
+  font-size: .95rem;
+  color: var(--muted);
+  line-height: 1;
+}
+.sort-btn:focus { outline: none; }
+.th-sortable.asc .sort-btn { color: var(--brand); }
+.th-sortable.desc .sort-btn { color: var(--muted); }
 
 /* ---------- Freshness indicator (last-updated) ---------- */
 .freshness-cell {

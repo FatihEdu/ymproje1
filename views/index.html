@@ -53,10 +53,23 @@
       <div class="card">
         <div class="section-header">
           <h3>Kur Grafiği</h3>
+          <div class="range-loader">
+            <label for="range-start-date" class="range-label">Baslangic</label>
+            <input type="date" id="range-start-date" />
+            <label for="range-end-date" class="range-label">Bitis</label>
+            <input type="date" id="range-end-date" />
+            <select id="chart-pair" aria-label="Grafik Paritesi">
+              <option value="USD/TRY">USD/TRY</option>
+              <option value="EUR/TRY">EUR/TRY</option>
+              <option value="GBP/TRY">GBP/TRY</option>
+              <option value="XAU/TRY">ALTIN (XAU/TRY)</option>
+            </select>
+            <button id="range-load-btn" class="btn btn-primary btn-sm" type="button">Gunluk Yukle</button>
+          </div>
         </div>
-        <div class="placeholder-box">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3zm4 10l3-3 3 3 5-5 1.4 1.4-6.4 6.4-3-3-2 2L7 13z"/></svg>
-          <span>Grafik yakında eklenecek</span>
+        <div id="chart-meta" class="text-muted mt-2"></div>
+        <div class="chart-wrap mt-3">
+          <canvas id="range-chart" width="960" height="280" aria-label="Kur aralik grafigi"></canvas>
         </div>
       </div>
 
@@ -64,20 +77,17 @@
       <div class="card">
         <div class="section-header">
           <h3>Kur Listesi</h3>
-          <div class="month-loader">
-            <input type="month" id="month-input" />
-            <button id="month-load-btn" class="btn btn-primary btn-sm" type="button">Ay Yukle</button>
-          </div>
         </div>
+        <div id="currency-list-meta" class="text-muted mt-2"></div>
         <div class="currency-table-wrap mt-3">
           <table class="currency-table">
             <thead>
               <tr>
                 <th class="col-fav" title="Favori"></th>
                 <th>Banka</th>
-                <th>Alış</th>
-                <th>Satış</th>
-                <th>Makas</th>
+                <th data-sort="buy" class="th-sortable">Alış <button type="button" class="sort-btn" aria-label="Sırala">⇅</button></th>
+                <th data-sort="sell" class="th-sortable">Satış <button type="button" class="sort-btn" aria-label="Sırala">⇅</button></th>
+                <th data-sort="spread" class="th-sortable">Makas <button type="button" class="sort-btn" aria-label="Sırala">⇅</button></th>
                 <th>Değişim %</th>
                 <th>Son Güncelleme</th>
               </tr>
