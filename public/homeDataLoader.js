@@ -72,6 +72,11 @@ let latestLoadedRows = [];
 let currentSort = { key: null, asc: true };
 let attemptedMonthlyFallback = false;
 let latestSnapshotCache = null;
+let currentMonthlyEntriesCache = null;
+let chartLastSeries = [];
+let chartLastPair = 'USD/TRY';
+let chartPointPixels = [];
+let chartHoverIndex = null;
 
 function clearSortIndicators() {
   document.querySelectorAll('th[data-sort]').forEach((el) => {
@@ -509,6 +514,10 @@ async function getLatestSnapshot() {
 }
 
 async function getCurrentMonthlyEntries() {
+  if (Array.isArray(currentMonthlyEntriesCache)) {
+    return currentMonthlyEntriesCache;
+  }
+
   let currentMonthlyPath = null;
   try {
     const indexJson = await fetchJson(`${DATA_BASE_URL}/index.json`);
@@ -526,7 +535,70 @@ async function getCurrentMonthlyEntries() {
   }
 
   const text = await fetchText(currentMonthlyPath);
-  return parseJsonl(text);
+  currentMonthlyEntriesCache = parseJsonl(text);
+  return currentMonthlyEntriesCache;
+}
+
+function toDateOnlyString(dateValue) {
+  const d = new Date(dateValue);
+  if (isNaN(d)) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function getAvailableDateBounds(entries) {
+  const points = [];
+  for (const entry of entries || []) {
+    const iso = entry?.runStartedAt || entry?.scheduledFor;
+    const dateOnly = toDateOnlyString(iso);
+    if (dateOnly) points.push(dateOnly);
+  }
+  if (!points.length) return null;
+  points.sort();
+  return {
+    minDate: points[0],
+    maxDate: points[points.length - 1],
+  };
+}
+
+function addDays(dateOnly, days) {
+  const d = new Date(`${dateOnly}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toDateOnlyString(d.toISOString());
+}
+
+async function applyDateInputBounds() {
+  const rangeStartInput = qs(SELECTORS.rangeStartInput);
+  const rangeEndInput = qs(SELECTORS.rangeEndInput);
+  if (!rangeStartInput || !rangeEndInput) return;
+
+  try {
+    const entries = await getCurrentMonthlyEntries();
+    const bounds = getAvailableDateBounds(entries);
+    if (!bounds) return;
+
+    const { minDate, maxDate } = bounds;
+    rangeStartInput.min = minDate;
+    rangeStartInput.max = maxDate;
+    rangeEndInput.min = minDate;
+    rangeEndInput.max = maxDate;
+
+    const desiredStart = addDays(maxDate, -7);
+    const safeStart = desiredStart && desiredStart >= minDate ? desiredStart : minDate;
+
+    if (!rangeStartInput.value || rangeStartInput.value < minDate || rangeStartInput.value > maxDate) {
+      rangeStartInput.value = safeStart;
+    }
+    if (!rangeEndInput.value || rangeEndInput.value < minDate || rangeEndInput.value > maxDate) {
+      rangeEndInput.value = maxDate;
+    }
+
+    if (rangeStartInput.value > rangeEndInput.value) {
+      rangeStartInput.value = rangeEndInput.value;
+    }
+  } catch (error) {
+    console.warn('[homeDataLoader] date input bounds could not be applied', error?.message || error);
+  }
 }
 
 function monthKeyToIndex(monthKey) {
@@ -577,9 +649,56 @@ function getPairParity(rows, pair) {
   return matches.reduce((a, b) => a + b, 0) / matches.length;
 }
 
+function ensureChartHoverEvents(canvas) {
+  if (!canvas || canvas.dataset.hoverBound === '1') return;
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (!chartPointPixels.length) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
+
+    let nearest = null;
+    let nearestDist = Infinity;
+
+    chartPointPixels.forEach((p, i) => {
+      const dx = mx - p.x;
+      const dy = my - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = i;
+      }
+    });
+
+    const nextHover = nearestDist <= 12 ? nearest : null;
+    canvas.style.cursor = nextHover != null ? 'pointer' : 'default';
+
+    if (nextHover !== chartHoverIndex) {
+      chartHoverIndex = nextHover;
+      drawRangeChart(chartLastSeries, chartLastPair);
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    if (chartHoverIndex != null) {
+      chartHoverIndex = null;
+      drawRangeChart(chartLastSeries, chartLastPair);
+    }
+    canvas.style.cursor = 'default';
+  });
+
+  canvas.dataset.hoverBound = '1';
+}
+
 function drawRangeChart(series, pair) {
   const canvas = qs(SELECTORS.chartCanvas);
   if (!canvas || typeof canvas.getContext !== 'function') return;
+
+  chartLastSeries = Array.isArray(series) ? series.slice() : [];
+  chartLastPair = pair;
+  ensureChartHoverEvents(canvas);
 
   const dpr = globalThis.devicePixelRatio || 1;
   const cssWidth = canvas.clientWidth || 960;
@@ -593,6 +712,7 @@ function drawRangeChart(series, pair) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
   if (!series.length) {
+    chartPointPixels = [];
     ctx.fillStyle = '#6b7280';
     ctx.font = '14px Segoe UI';
     ctx.fillText('Secilen aralikta grafik verisi bulunamadi.', 16, 30);
@@ -672,33 +792,94 @@ function drawRangeChart(series, pair) {
   ctx.stroke();
 
   ctx.fillStyle = '#1a56db';
+  chartPointPixels = [];
   series.forEach((point, i) => {
     const x = xFor(i);
     const y = yFor(point.value);
+    chartPointPixels.push({ x, y });
     ctx.beginPath();
     ctx.arc(x, y, 3.2, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  const maxTicks = Math.max(2, Math.floor(plotWidth / 110));
-  const step = Math.max(1, Math.ceil((series.length - 1) / Math.max(1, maxTicks - 1)));
-  const tickIndexes = [];
-  for (let i = 0; i < series.length; i += step) tickIndexes.push(i);
-  if (tickIndexes[tickIndexes.length - 1] !== series.length - 1) {
-    tickIndexes.push(series.length - 1);
+  if (chartHoverIndex != null && chartHoverIndex >= 0 && chartHoverIndex < series.length) {
+    const hp = chartPointPixels[chartHoverIndex];
+    const sv = series[chartHoverIndex];
+
+    // highlight hovered point
+    ctx.strokeStyle = '#1a56db';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(hp.x, hp.y, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const tooltipLine1 = sv?.label || '-';
+    const tooltipLine2 = `${pair}: ${formatNumber(sv?.value, 4)}`;
+    ctx.font = '12px Segoe UI';
+    const w = Math.max(ctx.measureText(tooltipLine1).width, ctx.measureText(tooltipLine2).width) + 16;
+    const h = 38;
+    let tx = hp.x + 10;
+    let ty = hp.y - h - 10;
+    if (tx + w > cssWidth - 8) tx = hp.x - w - 10;
+    if (tx < 8) tx = 8;
+    if (ty < 8) ty = hp.y + 10;
+
+    ctx.fillStyle = 'rgba(17, 24, 39, 0.92)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(tx, ty, w, h, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText(tooltipLine1, tx + 8, ty + 15);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(tooltipLine2, tx + 8, ty + 30);
   }
 
-  ctx.fillStyle = '#6b7280';
+  // Draw evenly spaced day labels (dd.mm) on x-axis.
+  const desiredTicks = Math.max(3, Math.min(7, Math.floor(plotWidth / 120)));
+  const tickIndexes = [];
+  if (series.length === 1) {
+    tickIndexes.push(0);
+  } else {
+    for (let t = 0; t < desiredTicks; t += 1) {
+      const idx = Math.round((t * (series.length - 1)) / (desiredTicks - 1));
+      if (tickIndexes[tickIndexes.length - 1] !== idx) tickIndexes.push(idx);
+    }
+  }
+
+  ctx.fillStyle = '#64748b';
   ctx.font = '11px Segoe UI';
-  for (const i of tickIndexes) {
-    const point = series[i];
-    const x = xFor(i);
-    const label = point.label;
-    const textWidth = ctx.measureText(label).width;
+  let lastDrawnLabel = '';
+
+  for (const pointIndex of tickIndexes) {
+    const point = series[pointIndex];
+    const dayLabel = String(point?.label || '').split(' ')[0] || '';
+    if (!dayLabel) continue;
+
+    // Skip only exact duplicates to avoid repeated same-day text.
+    if (dayLabel === lastDrawnLabel && tickIndexes.length > 1) continue;
+
+    const x = xFor(pointIndex);
+
+    // small tick mark
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, padding.top + plotHeight);
+    ctx.lineTo(x, padding.top + plotHeight + 4);
+    ctx.stroke();
+
+    const textWidth = ctx.measureText(dayLabel).width;
     const minX = padding.left;
     const maxX = cssWidth - padding.right - textWidth;
     const textX = Math.min(Math.max(x - textWidth / 2, minX), maxX);
-    ctx.fillText(label, textX, cssHeight - 12);
+    ctx.fillText(dayLabel, textX, cssHeight - 12);
+    lastDrawnLabel = dayLabel;
   }
 
   ctx.fillStyle = '#111827';
@@ -718,12 +899,10 @@ async function loadRangeChart(startDateValue, endDateValue, pair) {
   showLoading(`${startDateValue} - ${endDateValue} gunluk araligi yukleniyor...`);
   try {
     const series = [];
-    let latestRows = [];
     const baseSnapshot = await getLatestSnapshot();
     const providerMap = createProviderMapFromSnapshot(baseSnapshot);
     const entries = await getCurrentMonthlyEntries();
     let totalSnapshots = 0;
-    let inRangeSnapshots = 0;
 
     for (const entry of entries) {
       const results = Array.isArray(entry?.results) ? entry.results : [];
@@ -744,19 +923,10 @@ async function loadRangeChart(startDateValue, endDateValue, pair) {
           value,
         });
       }
-      inRangeSnapshots += 1;
-      latestRows = rows;
     }
 
     drawRangeChart(series, pair);
-    if (latestRows.length) {
-      latestLoadedRows = latestRows.slice();
-      updateSummaryCards(latestRows);
-      renderCurrencyList(latestRows);
-    }
-
-    renderChartMeta(`${pair} | Gun araligi: ${startDateValue} - ${endDateValue} | Nokta: ${series.length} | Snapshot: ${inRangeSnapshots}/${totalSnapshots}`);
-    renderMeta(`Gunluk aralik yuklendi: ${startDateValue} - ${endDateValue}`);
+    renderChartMeta('');
   } catch (error) {
     console.error(error);
     renderChartMeta(`Grafik yuklenemedi: ${error.message}`);
@@ -868,13 +1038,27 @@ function wireRangeLoader() {
   if (!button) return;
 
   button.addEventListener('click', () => {
-    const startDay = qs(SELECTORS.rangeStartInput)?.value || '';
-    const endDay = qs(SELECTORS.rangeEndInput)?.value || '';
+    const startInput = qs(SELECTORS.rangeStartInput);
+    const endInput = qs(SELECTORS.rangeEndInput);
+    const startDay = startInput?.value || '';
+    const endDay = endInput?.value || '';
     const pair = qs(SELECTORS.chartPair)?.value || 'USD/TRY';
     if (!startDay || !endDay) {
       renderChartMeta('Lutfen baslangic ve bitis tarihini secin.');
       return;
     }
+
+    const minDay = startInput?.min || endInput?.min || '';
+    const maxDay = startInput?.max || endInput?.max || '';
+    if (minDay && (startDay < minDay || endDay < minDay)) {
+      renderChartMeta(`Bu kaynakta en eski tarih ${minDay}. Daha onceki gunler secilemez.`);
+      return;
+    }
+    if (maxDay && (startDay > maxDay || endDay > maxDay)) {
+      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrasi secilemez.`);
+      return;
+    }
+
     loadRangeChart(startDay, endDay, pair);
   });
 }
@@ -902,10 +1086,11 @@ function setCurrentYear() {
 
 function init() {
   if (typeof setCurrentYear === 'function') setCurrentYear();
+  applyDateInputBounds();
   if (typeof wireSortHeaders === 'function') wireSortHeaders();
   if (typeof wireRangeLoader === 'function') wireRangeLoader();
   drawRangeChart([], 'USD/TRY');
-  renderChartMeta('Gun secip Gunluk Yukle dugmesine basin.');
+  renderChartMeta('');
   if (typeof initAuthState === 'function') {
     initAuthState()
       .then(typeof loadFavorites === 'function' ? loadFavorites : () => {})

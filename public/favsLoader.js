@@ -2,6 +2,15 @@ import { parseAllProviders } from './scrapeClientParser.js';
 
 const DATA_BASE_URL = globalThis.__SCRAPE_BASE_URL__ || 'https://fatihedu.github.io/ymproje1';
 
+const state = {
+  allRows: [],
+  favorites: [],
+  query: '',
+  sortKey: 'pair',
+  sortDir: 'asc',
+  undo: null,
+};
+
 function qs(selector) {
   return document.querySelector(selector);
 }
@@ -26,6 +35,29 @@ function formatShortDateTime(dateString) {
   if (isNaN(d)) return '-';
   const pad = (n) => n.toString().padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatRelativeTime(dateString) {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  if (isNaN(d)) return '-';
+  const now = new Date();
+  const diffMin = Math.floor((now - d) / 1000 / 60);
+  if (diffMin < 1) return 'şimdi';
+  if (diffMin < 60 * 24) return `${diffMin} dk önce`;
+  const diffDay = Math.floor(diffMin / 60 / 24);
+  if (diffDay < 7) return `${diffDay} gün önce`;
+  return formatShortDateTime(dateString).slice(0, 10);
+}
+
+function getFreshnessClass(dateString) {
+  if (!dateString) return 'freshness--unknown';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'freshness--unknown';
+  const diffMin = Math.floor((new Date() - d) / 1000 / 60);
+  if (diffMin < 60 * 24) return 'freshness--fresh';
+  if (diffMin < 60 * 24 * 7) return 'freshness--warn';
+  return 'freshness--stale';
 }
 
 function renderMeta(message) {
@@ -70,19 +102,101 @@ async function removeFavorite(pair, providerName) {
   }
 }
 
-function renderTable(rows, favorites) {
+async function addFavorite(pair, providerName) {
+  const token = await getCsrfToken();
+  const body = new URLSearchParams({ pair, providerName }).toString();
+  const res = await fetch('/api/favorites', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'x-csrf-token': token,
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || `HTTP ${res.status}`);
+  }
+}
+
+function getFilteredRows() {
+  const keys = new Set(state.favorites.map((f) => favoriteKey(f.pair, f.providerName)));
+  const q = state.query.trim().toLowerCase();
+  const rows = state.allRows
+    .filter((r) => keys.has(favoriteKey(r.pair, r.providerName)))
+    .filter((r) => {
+      if (!q) return true;
+      return r.pair.toLowerCase().includes(q) || r.providerName.toLowerCase().includes(q);
+    });
+
+  const sign = state.sortDir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    const k = state.sortKey;
+    if (k === 'pair' || k === 'providerName') {
+      return sign * String(a[k]).localeCompare(String(b[k]), 'tr');
+    }
+    if (k === 'time') {
+      const av = new Date(a.time || 0).getTime() || 0;
+      const bv = new Date(b.time || 0).getTime() || 0;
+      return sign * (av - bv);
+    }
+    const av = Number(a[k]);
+    const bv = Number(b[k]);
+    const aInvalid = !Number.isFinite(av);
+    const bInvalid = !Number.isFinite(bv);
+    if (aInvalid && bInvalid) return 0;
+    if (aInvalid) return 1;
+    if (bInvalid) return -1;
+    return sign * (av - bv);
+  });
+
+  return rows;
+}
+
+function hideUndo() {
+  const wrap = qs('#favs-undo');
+  if (wrap) wrap.classList.add('hidden');
+  state.undo = null;
+}
+
+function showUndo(removed) {
+  if (state.undo?.timer) clearTimeout(state.undo.timer);
+  const wrap = qs('#favs-undo');
+  const text = qs('#favs-undo-text');
+  if (!wrap || !text) return;
+  text.textContent = `${removed.pair} - ${removed.providerName} favorilerden kaldırıldı.`;
+  wrap.classList.remove('hidden');
+  state.undo = {
+    item: removed,
+    timer: setTimeout(() => hideUndo(), 6000),
+  };
+}
+
+async function handleUndo() {
+  if (!state.undo?.item) return;
+  const item = state.undo.item;
+  try {
+    await addFavorite(item.pair, item.providerName);
+    const exists = state.favorites.some((f) => favoriteKey(f.pair, f.providerName) === favoriteKey(item.pair, item.providerName));
+    if (!exists) state.favorites.push(item);
+    renderTable();
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+  } catch (error) {
+    console.error(error);
+    renderMeta(`Geri alma başarısız: ${error.message}`);
+  } finally {
+    hideUndo();
+  }
+}
+
+function renderTable() {
   const body = qs('#favs-list-body');
   if (!body) return;
 
   body.textContent = '';
 
-  const keys = new Set(favorites.map((f) => favoriteKey(f.pair, f.providerName)));
-  const tableRows = rows
-    .filter((r) => keys.has(favoriteKey(r.pair, r.providerName)))
-    .sort((a, b) => {
-      if (a.pair !== b.pair) return a.pair.localeCompare(b.pair);
-      return a.providerName.localeCompare(b.providerName);
-    });
+  const tableRows = getFilteredRows();
 
   if (!tableRows.length) {
     const tr = document.createElement('tr');
@@ -93,6 +207,7 @@ function renderTable(rows, favorites) {
 
   for (const row of tableRows) {
     const changeClass = row.changePct > 0 ? 'change-positive' : row.changePct < 0 ? 'change-negative' : 'change-neutral';
+    const freshnessClass = getFreshnessClass(row.time);
     const tr = document.createElement('tr');
     tr.className = 'bank-row';
     tr.innerHTML = `
@@ -102,7 +217,12 @@ function renderTable(rows, favorites) {
       <td>${formatNumber(row.sell)}</td>
       <td>${formatNumber(row.spread)}</td>
       <td class="${changeClass}">${formatPct(row.changePct)}</td>
-      <td>${formatShortDateTime(row.time)}</td>
+      <td class="${freshnessClass}" title="${formatShortDateTime(row.time)}">
+        <div class="freshness-cell">
+          <span class="freshness-dot"></span>
+          <span class="freshness-text">${formatRelativeTime(row.time)}</span>
+        </div>
+      </td>
       <td><button class="btn btn-danger btn-sm" type="button" data-pair="${row.pair}" data-provider="${row.providerName}">Kaldır</button></td>
     `;
     body.appendChild(tr);
@@ -115,7 +235,12 @@ function renderTable(rows, favorites) {
       btn.disabled = true;
       try {
         await removeFavorite(pair, providerName);
-        await loadFavoritesPage();
+        const key = favoriteKey(pair, providerName);
+        const removed = state.favorites.find((f) => favoriteKey(f.pair, f.providerName) === key);
+        state.favorites = state.favorites.filter((f) => favoriteKey(f.pair, f.providerName) !== key);
+        renderTable();
+        renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+        if (removed) showUndo(removed);
       } catch (error) {
         console.error(error);
         renderMeta(`Favori kaldirilamadi: ${error.message}`);
@@ -126,6 +251,40 @@ function renderTable(rows, favorites) {
   });
 }
 
+function wireControls() {
+  const search = qs('#favs-search');
+  const sort = qs('#favs-sort');
+  const dir = qs('#favs-sort-dir');
+  const undoBtn = qs('#favs-undo-btn');
+
+  if (search) {
+    search.addEventListener('input', () => {
+      state.query = search.value || '';
+      renderTable();
+      renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+    });
+  }
+
+  if (sort) {
+    sort.addEventListener('change', () => {
+      state.sortKey = sort.value;
+      renderTable();
+    });
+  }
+
+  if (dir) {
+    dir.addEventListener('click', () => {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      dir.textContent = state.sortDir === 'asc' ? 'Artan ↑' : 'Azalan ↓';
+      renderTable();
+    });
+  }
+
+  if (undoBtn) {
+    undoBtn.addEventListener('click', handleUndo);
+  }
+}
+
 async function loadFavoritesPage() {
   try {
     const [favoritesData, latestData] = await Promise.all([
@@ -133,13 +292,13 @@ async function loadFavoritesPage() {
       fetchJson(`${DATA_BASE_URL}/latest_all.json`),
     ]);
 
-    const favorites = Array.isArray(favoritesData?.favorites) ? favoritesData.favorites : [];
-    const allRows = parseAllProviders(latestData);
+    state.favorites = Array.isArray(favoritesData?.favorites) ? favoritesData.favorites : [];
+    state.allRows = parseAllProviders(latestData);
 
     // Keep only favorites that still exist in latest dataset.
-    const existing = favorites.filter((fav) => Boolean(findRowByFavorite(allRows, fav)));
-    renderTable(allRows, existing);
-    renderMeta(`Toplam favori: ${existing.length}`);
+    state.favorites = state.favorites.filter((fav) => Boolean(findRowByFavorite(state.allRows, fav)));
+    renderTable();
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Favorilerim yuklenemedi: ${error.message}`);
@@ -147,5 +306,8 @@ async function loadFavoritesPage() {
 }
 
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', loadFavoritesPage);
+  document.addEventListener('DOMContentLoaded', () => {
+    wireControls();
+    loadFavoritesPage();
+  });
 }

@@ -702,3 +702,42 @@ a:hover { text-decoration: underline; }
 .freshness--unknown .freshness-text {
   color: var(--muted);
 }
+
+/* ---------- Favorites toolbar + undo ---------- */
+.favs-toolbar {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.favs-toolbar input,
+.favs-toolbar select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .5rem .65rem;
+  font-size: .9rem;
+  background: #fff;
+}
+
+.favs-toolbar input {
+  min-width: 220px;
+  flex: 1 1 240px;
+}
+
+.favs-undo {
+  margin-top: .9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem .8rem;
+  border-radius: var(--radius);
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.hidden {
+  display: none !important;
+}
