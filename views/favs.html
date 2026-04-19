@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Favoriler – Kur Takip</title>
+  <title>Favorilerim – Kur Takip</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -13,13 +13,32 @@
   <main class="page">
     <div class="card">
       <h2>Favori Kurlarınız</h2>
-      <p class="mt-3 text-muted">Favori döviz kurlarınız burada görünecek. Özellik yakında eklenecektir.</p>
-      <form action="/logout" method="post" class="mt-5">
-        <!--CSRF-->
-        <button type="submit" class="btn btn-danger">Çıkış Yap</button>
-      </form>
+      <p id="favs-meta" class="mt-3 text-muted">Favorilerim yukleniyor...</p>
+      <div class="currency-table-wrap mt-3">
+        <table class="currency-table">
+          <thead>
+            <tr>
+              <th>Parite</th>
+              <th>Banka</th>
+              <th>Alış</th>
+              <th>Satış</th>
+              <th>Makas</th>
+              <th>Değişim %</th>
+              <th>Saat</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="favs-list-body"></tbody>
+        </table>
+      </div>
+      <div id="favs-undo" class="favs-undo hidden" role="status" aria-live="polite">
+        <span id="favs-undo-text"></span>
+        <button id="favs-undo-btn" class="btn btn-sm" type="button">Geri Al</button>
+      </div>
     </div>
   </main>
+
+  <script type="module" src="/favsLoader.js"></script>
 
 </body>
 </html>
