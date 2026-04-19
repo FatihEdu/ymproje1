@@ -709,6 +709,8 @@ a:hover { text-decoration: underline; }
   gap: .5rem;
   flex-wrap: wrap;
   align-items: center;
+  margin-top: .25rem;
+  text-decoration: none;
 }
 
 .favs-toolbar input,
@@ -718,11 +720,38 @@ a:hover { text-decoration: underline; }
   padding: .5rem .65rem;
   font-size: .9rem;
   background: #fff;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: none;
+  outline: none;
+  text-decoration: none;
 }
 
 .favs-toolbar input {
   min-width: 220px;
   flex: 1 1 240px;
+}
+
+.favs-toolbar input:focus,
+.favs-toolbar select:focus,
+.favs-toolbar .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.favs-toolbar .btn {
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.favs-meta {
+  text-decoration: none;
+}
+
+.favs-toolbar,
+.favs-toolbar * {
+  text-decoration: none;
 }
 
 .favs-undo {

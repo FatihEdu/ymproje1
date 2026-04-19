@@ -7,9 +7,9 @@ function formatRelativeTime(dateString) {
   const diffSec = Math.floor(diffMs / 1000);
   if (diffSec < 60) return 'şimdi';
   const diffMin = Math.floor(diffSec / 60);
-  // show minutes for anything less than 24 hours
-  if (diffMin < 60 * 24) return `${diffMin} dk önce`;
   const diffHour = Math.floor(diffMin / 60);
+  if (diffMin < 60) return `${diffMin} dk önce`;
+  if (diffHour < 24) return `${diffHour} saat önce`;
   const diffDay = Math.floor(diffHour / 24);
   if (diffDay < 7) return `${diffDay} gün önce`;
   // 7 gün ve fazlası için kısa tarih göster

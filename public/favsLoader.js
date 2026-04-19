@@ -44,7 +44,9 @@ function formatRelativeTime(dateString) {
   const now = new Date();
   const diffMin = Math.floor((now - d) / 1000 / 60);
   if (diffMin < 1) return 'şimdi';
-  if (diffMin < 60 * 24) return `${diffMin} dk önce`;
+  if (diffMin < 60) return `${diffMin} dk önce`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} saat önce`;
   const diffDay = Math.floor(diffMin / 60 / 24);
   if (diffDay < 7) return `${diffDay} gün önce`;
   return formatShortDateTime(dateString).slice(0, 10);
