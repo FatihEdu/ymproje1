@@ -111,18 +111,15 @@ function sortByKey(key) {
     currentSort.key = key;
     currentSort.asc = true;
   }
-  console.log('[homeDataLoader] sorting', currentSort);
   updateSortIndicator();
   renderCurrencyList(latestLoadedRows);
 }
 function wireSortHeaders() {
   const headers = Array.from(document.querySelectorAll('th[data-sort]'));
-  console.log('[homeDataLoader] wireSortHeaders found', headers.map(h => h.getAttribute('data-sort')));
   headers.forEach((th) => {
     th.classList.add('th-sortable');
     th.addEventListener('click', () => {
       const key = th.getAttribute('data-sort');
-      console.log('[homeDataLoader] sort header clicked', key);
       if (currentSort.key === key) {
         currentSort.asc = !currentSort.asc;
       } else {
@@ -130,7 +127,6 @@ function wireSortHeaders() {
         currentSort.asc = true;
       }
       updateSortIndicator();
-      console.log('[homeDataLoader] sorting', currentSort, 'rows:', latestLoadedRows.length);
       renderCurrencyList(latestLoadedRows);
     });
   });
@@ -348,9 +344,6 @@ function renderCurrencyList(rows) {
       const key = favoriteKey(row.pair, row.providerName);
       const isFav = favoriteSet.has(key);
       const freshnessClass = getFreshnessClass(row.time);
-
-      // Debug: log time and freshness for each row
-      console.log(`[homeDataLoader] ${row.providerName} ${row.pair} time=${row.time} relative="${formatRelativeTime(row.time)}" freshness=${freshnessClass}`);
 
       const tr = document.createElement('tr');
       tr.className = 'bank-row';

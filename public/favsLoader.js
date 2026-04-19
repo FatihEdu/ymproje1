@@ -5,9 +5,6 @@ const DATA_BASE_URL = globalThis.__SCRAPE_BASE_URL__ || 'https://fatihedu.github
 const state = {
   allRows: [],
   favorites: [],
-  query: '',
-  sortKey: 'pair',
-  sortDir: 'asc',
   undo: null,
 };
 
@@ -124,33 +121,12 @@ async function addFavorite(pair, providerName) {
 
 function getFilteredRows() {
   const keys = new Set(state.favorites.map((f) => favoriteKey(f.pair, f.providerName)));
-  const q = state.query.trim().toLowerCase();
   const rows = state.allRows
-    .filter((r) => keys.has(favoriteKey(r.pair, r.providerName)))
-    .filter((r) => {
-      if (!q) return true;
-      return r.pair.toLowerCase().includes(q) || r.providerName.toLowerCase().includes(q);
-    });
+    .filter((r) => keys.has(favoriteKey(r.pair, r.providerName)));
 
-  const sign = state.sortDir === 'asc' ? 1 : -1;
   rows.sort((a, b) => {
-    const k = state.sortKey;
-    if (k === 'pair' || k === 'providerName') {
-      return sign * String(a[k]).localeCompare(String(b[k]), 'tr');
-    }
-    if (k === 'time') {
-      const av = new Date(a.time || 0).getTime() || 0;
-      const bv = new Date(b.time || 0).getTime() || 0;
-      return sign * (av - bv);
-    }
-    const av = Number(a[k]);
-    const bv = Number(b[k]);
-    const aInvalid = !Number.isFinite(av);
-    const bInvalid = !Number.isFinite(bv);
-    if (aInvalid && bInvalid) return 0;
-    if (aInvalid) return 1;
-    if (bInvalid) return -1;
-    return sign * (av - bv);
+    if (a.pair !== b.pair) return a.pair.localeCompare(b.pair, 'tr');
+    return a.providerName.localeCompare(b.providerName, 'tr');
   });
 
   return rows;
@@ -183,7 +159,7 @@ async function handleUndo() {
     const exists = state.favorites.some((f) => favoriteKey(f.pair, f.providerName) === favoriteKey(item.pair, item.providerName));
     if (!exists) state.favorites.push(item);
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Geri alma başarısız: ${error.message}`);
@@ -241,7 +217,7 @@ function renderTable() {
         const removed = state.favorites.find((f) => favoriteKey(f.pair, f.providerName) === key);
         state.favorites = state.favorites.filter((f) => favoriteKey(f.pair, f.providerName) !== key);
         renderTable();
-        renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+        renderMeta(`Toplam favori: ${state.favorites.length}`);
         if (removed) showUndo(removed);
       } catch (error) {
         console.error(error);
@@ -254,33 +230,7 @@ function renderTable() {
 }
 
 function wireControls() {
-  const search = qs('#favs-search');
-  const sort = qs('#favs-sort');
-  const dir = qs('#favs-sort-dir');
   const undoBtn = qs('#favs-undo-btn');
-
-  if (search) {
-    search.addEventListener('input', () => {
-      state.query = search.value || '';
-      renderTable();
-      renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
-    });
-  }
-
-  if (sort) {
-    sort.addEventListener('change', () => {
-      state.sortKey = sort.value;
-      renderTable();
-    });
-  }
-
-  if (dir) {
-    dir.addEventListener('click', () => {
-      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-      dir.textContent = state.sortDir === 'asc' ? 'Artan ↑' : 'Azalan ↓';
-      renderTable();
-    });
-  }
 
   if (undoBtn) {
     undoBtn.addEventListener('click', handleUndo);
@@ -300,7 +250,7 @@ async function loadFavoritesPage() {
     // Keep only favorites that still exist in latest dataset.
     state.favorites = state.favorites.filter((fav) => Boolean(findRowByFavorite(state.allRows, fav)));
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Favorilerim yuklenemedi: ${error.message}`);
