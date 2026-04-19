@@ -597,3 +597,52 @@ a:hover { text-decoration: underline; }
   color: #6b7280;
   font-weight: 600;
 }
+
+/* ---------- Freshness indicator (last-updated) ---------- */
+.freshness-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.freshness-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9ca3af; /* fallback grey */
+  flex: 0 0 10px;
+  box-shadow: 0 0 0 4px rgba(156,163,175,0.06);
+}
+
+.freshness-text {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.freshness--fresh .freshness-dot {
+  background: #16a34a;
+}
+.freshness--fresh .freshness-text {
+  color: #065f46;
+}
+
+.freshness--warn .freshness-dot {
+  background: #f59e0b;
+}
+.freshness--warn .freshness-text {
+  color: #92400e;
+}
+
+.freshness--stale .freshness-dot {
+  background: #ef4444;
+}
+.freshness--stale .freshness-text {
+  color: #7f1d1d;
+}
+
+.freshness--unknown .freshness-dot {
+  background: #9ca3af;
+}
+.freshness--unknown .freshness-text {
+  color: var(--muted);
+}

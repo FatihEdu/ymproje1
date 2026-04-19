@@ -7,9 +7,9 @@ function formatRelativeTime(dateString) {
   const diffSec = Math.floor(diffMs / 1000);
   if (diffSec < 60) return 'şimdi';
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} dk önce`;
+  // show minutes for anything less than 24 hours
+  if (diffMin < 60 * 24) return `${diffMin} dk önce`;
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} sa önce`;
   const diffDay = Math.floor(diffHour / 24);
   if (diffDay < 7) return `${diffDay} gün önce`;
   // 7 gün ve fazlası için kısa tarih göster
@@ -22,6 +22,21 @@ function formatShortDateTime(dateString) {
   if (isNaN(d)) return '-';
   const pad = (n) => n.toString().padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getFreshnessClass(dateString) {
+  if (!dateString) return 'freshness--unknown';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'freshness--unknown';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 1000 / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffMin < 60 * 24) return 'freshness--fresh';
+  if (diffDay < 7) return 'freshness--warn';
+  return 'freshness--stale';
 }
 import { parseAllProviders } from './scrapeClientParser.js';
 
@@ -235,6 +250,11 @@ function renderCurrencyList(rows) {
       const changeClass = row.changePct > 0 ? 'up' : row.changePct < 0 ? 'down' : '';
       const key = favoriteKey(row.pair, row.providerName);
       const isFav = favoriteSet.has(key);
+      const freshnessClass = getFreshnessClass(row.time);
+
+      // Debug: log time and freshness for each row
+      console.log(`[homeDataLoader] ${row.providerName} ${row.pair} time=${row.time} relative="${formatRelativeTime(row.time)}" freshness=${freshnessClass}`);
+
       const tr = document.createElement('tr');
       tr.className = 'bank-row';
       tr.innerHTML = `
@@ -246,7 +266,12 @@ function renderCurrencyList(rows) {
         <td>${formatNumber(row.sell)}</td>
         <td>${formatNumber(row.spread)}</td>
         <td class="${changeClass}">${formatPct(row.changePct)}</td>
-        <td>${formatShortDateTime(row.time)}</td>
+        <td class="last-updated ${freshnessClass}" title="${formatShortDateTime(row.time)}">
+          <div class="freshness-cell">
+            <span class="freshness-dot"></span>
+            <span class="freshness-text">${formatRelativeTime(row.time)}</span>
+          </div>
+        </td>
       `;
       body.appendChild(tr);
     }
