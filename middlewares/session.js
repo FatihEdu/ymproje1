@@ -27,7 +27,7 @@ function sessionMiddleware() {
     // no persistent store configured; defaults to MemoryStore (dev only)
     // replace with a real store (e.g. connect-redis) before running in production
     cookie: {
-      secure: isProduction ? 'auto' : false, // send secure cookies in production when the request is HTTPS
+      secure: isProduction, // send secure cookies in production when the request is HTTPS
       httpOnly: true, // helps mitigate XSS attacks but javascript won't be able to access this cookie
       sameSite: 'lax', // reasonable default to mitigate CSRF
       maxAge: sessionMaxAge // set cookie expiration based on env or default
