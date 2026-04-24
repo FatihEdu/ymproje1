@@ -925,7 +925,7 @@ function drawRangeChart(series, pair) {
 }
 
 async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) {
-  const { silentFailure = false } = options;
+  const { silentFailure = false, manageLoading = true } = options;
   const start = new Date(`${startDateValue}T00:00:00`);
   const end = new Date(`${endDateValue}T23:59:59`);
   if (isNaN(start) || isNaN(end) || start > end) {
@@ -936,7 +936,9 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     return false;
   }
 
-  showLoading(`${startDateValue} - ${endDateValue} gunluk araligi yukleniyor...`);
+  if (manageLoading) {
+    showLoading(`${startDateValue} - ${endDateValue} gunluk araligi yukleniyor...`);
+  }
   try {
     const series = [];
     const baseSnapshot = await getLatestSnapshot();
@@ -975,7 +977,9 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     }
     return false;
   } finally {
-    hideLoading();
+    if (manageLoading) {
+      hideLoading();
+    }
   }
 }
 
@@ -996,21 +1000,28 @@ async function loadChartFromInputs() {
 
 async function loadChartFromInputsWithRetry(maxAttempts = 3) {
   let attempt = 0;
-  while (attempt < maxAttempts) {
-    const ok = await loadRangeChart(
-      qs(SELECTORS.rangeStartInput)?.value || '',
-      qs(SELECTORS.rangeEndInput)?.value || '',
-      qs(SELECTORS.chartPair)?.value || 'USD/TRY',
-      { silentFailure: attempt < maxAttempts - 1 }
-    );
-    if (ok) return true;
-    attempt += 1;
-    if (attempt < maxAttempts) {
-      await sleep(250 * attempt);
+  const startDay = qs(SELECTORS.rangeStartInput)?.value || '';
+  const endDay = qs(SELECTORS.rangeEndInput)?.value || '';
+  showLoading(`${startDay} - ${endDay} gunluk araligi yukleniyor...`);
+  
+  try {
+    while (attempt < maxAttempts) {
+      const ok = await loadRangeChart(
+        qs(SELECTORS.rangeStartInput)?.value || '',
+        qs(SELECTORS.rangeEndInput)?.value || '',
+        qs(SELECTORS.chartPair)?.value || 'USD/TRY',
+        { silentFailure: attempt < maxAttempts - 1, manageLoading: false }
+      );
+      if (ok) return true;
+      attempt += 1;
+      if (attempt < maxAttempts) {
+        await sleep(250 * attempt);
+      }
     }
+    return false;
+  } finally {
+    hideLoading();
   }
-
-  return false;
 }
 
 export async function loadLatestData() {
@@ -1132,37 +1143,42 @@ function setCurrentYear() {
 }
 
 async function init() {
-  if (typeof setCurrentYear === 'function') setCurrentYear();
-  const boundsPromise = applyDateInputBounds();
-  if (typeof wireSortHeaders === 'function') wireSortHeaders();
-  if (typeof wireRangeLoader === 'function') wireRangeLoader();
-  drawRangeChart([], 'USD/TRY');
-  renderChartMeta('');
-  if (typeof initAuthState === 'function') {
-    initAuthState()
-      .then(typeof loadFavorites === 'function' ? loadFavorites : () => {})
-      .catch((error) => {
-        console.warn('[homeDataLoader] auth state could not be initialized', error?.message || error);
-      });
-  }
-
-  const latestPromise = typeof loadLatestData === 'function' ? loadLatestData() : Promise.resolve();
-  const chartPromise = (async () => {
-    await boundsPromise.catch((error) => {
-      console.warn('[homeDataLoader] date bounds could not be applied', error?.message || error);
-    });
-    await loadChartFromInputsWithRetry(3);
-  })();
-
-  await Promise.allSettled([latestPromise, chartPromise, boundsPromise]);
-
-  // safety: if nothing loaded shortly after init, try loading latest again
-  setTimeout(() => {
-    if ((!latestLoadedRows || latestLoadedRows.length === 0) && typeof loadLatestData === 'function') {
-      console.warn('[homeDataLoader] no rows after init — retrying loadLatestData');
-      loadLatestData();
+  showLoading('Sayfa hazirlaniyor...');
+  try {
+    if (typeof setCurrentYear === 'function') setCurrentYear();
+    const boundsPromise = applyDateInputBounds();
+    if (typeof wireSortHeaders === 'function') wireSortHeaders();
+    if (typeof wireRangeLoader === 'function') wireRangeLoader();
+    drawRangeChart([], 'USD/TRY');
+    renderChartMeta('');
+    if (typeof initAuthState === 'function') {
+      initAuthState()
+        .then(typeof loadFavorites === 'function' ? loadFavorites : () => {})
+        .catch((error) => {
+          console.warn('[homeDataLoader] auth state could not be initialized', error?.message || error);
+        });
     }
-  }, 1200);
+
+    const latestPromise = typeof loadLatestData === 'function' ? loadLatestData() : Promise.resolve();
+    const chartPromise = (async () => {
+      await boundsPromise.catch((error) => {
+        console.warn('[homeDataLoader] date bounds could not be applied', error?.message || error);
+      });
+      await loadChartFromInputsWithRetry(3);
+    })();
+
+    await Promise.allSettled([latestPromise, chartPromise, boundsPromise]);
+
+    // safety: if nothing loaded shortly after init, try loading latest again
+    setTimeout(() => {
+      if ((!latestLoadedRows || latestLoadedRows.length === 0) && typeof loadLatestData === 'function') {
+        console.warn('[homeDataLoader] no rows after init — retrying loadLatestData');
+        loadLatestData();
+      }
+    }, 1200);
+  } finally {
+    hideLoading();
+  }
 }
 
 if (typeof document !== 'undefined') {
