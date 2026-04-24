@@ -752,7 +752,13 @@ function drawRangeChart(series, pair) {
     chartPointPixels = [];
     ctx.fillStyle = '#6b7280';
     ctx.font = '14px Segoe UI';
-    ctx.fillText('Secilen aralikta grafik verisi bulunamadi.', 16, 30);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Secilen aralikta grafik verisi bulunamadi.', cssWidth / 2, cssHeight / 2);
+    
+    // Default değerlere geri al
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     return;
   }
 
