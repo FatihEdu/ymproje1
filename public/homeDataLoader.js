@@ -111,18 +111,15 @@ function sortByKey(key) {
     currentSort.key = key;
     currentSort.asc = true;
   }
-  console.log('[homeDataLoader] sorting', currentSort);
   updateSortIndicator();
   renderCurrencyList(latestLoadedRows);
 }
 function wireSortHeaders() {
   const headers = Array.from(document.querySelectorAll('th[data-sort]'));
-  console.log('[homeDataLoader] wireSortHeaders found', headers.map(h => h.getAttribute('data-sort')));
   headers.forEach((th) => {
     th.classList.add('th-sortable');
     th.addEventListener('click', () => {
       const key = th.getAttribute('data-sort');
-      console.log('[homeDataLoader] sort header clicked', key);
       if (currentSort.key === key) {
         currentSort.asc = !currentSort.asc;
       } else {
@@ -130,7 +127,6 @@ function wireSortHeaders() {
         currentSort.asc = true;
       }
       updateSortIndicator();
-      console.log('[homeDataLoader] sorting', currentSort, 'rows:', latestLoadedRows.length);
       renderCurrencyList(latestLoadedRows);
     });
   });
@@ -334,13 +330,16 @@ function renderCurrencyList(rows) {
 
     const headerRow = document.createElement('tr');
     headerRow.className = 'currency-group-row';
-    headerRow.innerHTML = `
-      <td colspan="7">
-        <div class="currency-group">
-          <span class="currency-group__name">${displayPair}</span>
-        </div>
-      </td>
-    `;
+    const headerTd = document.createElement('td');
+    headerTd.colSpan = 7;
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'currency-group';
+    const groupName = document.createElement('span');
+    groupName.className = 'currency-group__name';
+    groupName.textContent = displayPair;
+    groupDiv.appendChild(groupName);
+    headerTd.appendChild(groupDiv);
+    headerRow.appendChild(headerTd);
     body.appendChild(headerRow);
 
     for (const row of groupRows) {
@@ -349,27 +348,59 @@ function renderCurrencyList(rows) {
       const isFav = favoriteSet.has(key);
       const freshnessClass = getFreshnessClass(row.time);
 
-      // Debug: log time and freshness for each row
-      console.log(`[homeDataLoader] ${row.providerName} ${row.pair} time=${row.time} relative="${formatRelativeTime(row.time)}" freshness=${freshnessClass}`);
-
       const tr = document.createElement('tr');
       tr.className = 'bank-row';
-      tr.innerHTML = `
-        <td class="col-fav">
-          ${isLoggedIn ? `<button class="fav-btn ${isFav ? 'is-active' : ''}" type="button" data-pair="${row.pair}" data-provider="${row.providerName}" aria-label="Favori">★</button>` : ''}
-        </td>
-        <td>${row.providerName}</td>
-        <td>${formatNumber(row.buy)}</td>
-        <td>${formatNumber(row.sell)}</td>
-        <td>${formatNumber(row.spread)}</td>
-        <td class="${changeClass}">${formatPct(row.changePct)}</td>
-        <td class="last-updated ${freshnessClass}" title="${formatShortDateTime(row.time)}">
-          <div class="freshness-cell">
-            <span class="freshness-dot"></span>
-            <span class="freshness-text">${formatRelativeTime(row.time)}</span>
-          </div>
-        </td>
-      `;
+
+      const favTd = document.createElement('td');
+      favTd.className = 'col-fav';
+      if (isLoggedIn) {
+        const favBtn = document.createElement('button');
+        favBtn.className = `fav-btn${isFav ? ' is-active' : ''}`;
+        favBtn.type = 'button';
+        favBtn.dataset.pair = row.pair;
+        favBtn.dataset.provider = row.providerName;
+        favBtn.setAttribute('aria-label', 'Favori');
+        favBtn.textContent = '★';
+        favTd.appendChild(favBtn);
+      }
+      tr.appendChild(favTd);
+
+      const providerTd = document.createElement('td');
+      providerTd.textContent = row.providerName;
+      tr.appendChild(providerTd);
+
+      const buyTd = document.createElement('td');
+      buyTd.textContent = formatNumber(row.buy);
+      tr.appendChild(buyTd);
+
+      const sellTd = document.createElement('td');
+      sellTd.textContent = formatNumber(row.sell);
+      tr.appendChild(sellTd);
+
+      const spreadTd = document.createElement('td');
+      spreadTd.textContent = formatNumber(row.spread);
+      tr.appendChild(spreadTd);
+
+      const changeTd = document.createElement('td');
+      changeTd.className = changeClass;
+      changeTd.textContent = formatPct(row.changePct);
+      tr.appendChild(changeTd);
+
+      const freshnessTd = document.createElement('td');
+      freshnessTd.className = `last-updated ${freshnessClass}`;
+      freshnessTd.title = formatShortDateTime(row.time);
+      const freshnessCell = document.createElement('div');
+      freshnessCell.className = 'freshness-cell';
+      const freshnessDot = document.createElement('span');
+      freshnessDot.className = 'freshness-dot';
+      freshnessCell.appendChild(freshnessDot);
+      const freshnessText = document.createElement('span');
+      freshnessText.className = 'freshness-text';
+      freshnessText.textContent = formatRelativeTime(row.time);
+      freshnessCell.appendChild(freshnessText);
+      freshnessTd.appendChild(freshnessCell);
+      tr.appendChild(freshnessTd);
+
       body.appendChild(tr);
     }
   }
@@ -504,13 +535,8 @@ async function getLatestSnapshot() {
   }
 
   const latestUrl = `${DATA_BASE_URL}/latest_all.json`;
-  try {
-    latestSnapshotCache = await fetchJson(latestUrl);
-    return latestSnapshotCache;
-  } catch {
-    latestSnapshotCache = await fetchJson('/latest_all_sample.json');
-    return latestSnapshotCache;
-  }
+  latestSnapshotCache = await fetchJson(latestUrl);
+  return latestSnapshotCache;
 }
 
 async function getCurrentMonthlyEntries() {
@@ -540,10 +566,14 @@ async function getCurrentMonthlyEntries() {
 }
 
 function toDateOnlyString(dateValue) {
+  if (typeof dateValue === 'string') {
+    const isoDateMatch = dateValue.match(/^(\d{4}-\d{2}-\d{2})(?:$|T)/);
+    if (isoDateMatch) return isoDateMatch[1];
+  }
   const d = new Date(dateValue);
   if (isNaN(d)) return null;
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
 function getAvailableDateBounds(entries) {
@@ -939,44 +969,14 @@ export async function loadLatestData() {
   showLoading('Son veriler yukleniyor...');
   try {
     const latestUrl = `${DATA_BASE_URL}/latest_all.json`;
-    let latest;
-    try {
-      latest = await fetchJson(latestUrl);
-      latestSnapshotCache = latest;
-    } catch (e) {
-      console.warn('[homeDataLoader] failed to fetch remote latest_all.json, will try local sample', e.message);
-      try {
-        latest = await fetchJson('/latest_all_sample.json');
-        latestSnapshotCache = latest;
-      } catch (e2) {
-        throw e; // rethrow original
-      }
-    }
+    const latest = await fetchJson(latestUrl);
+    latestSnapshotCache = latest;
     let rows = [];
     try {
       rows = filterVisibleRows(parseAllProviders(latest));
     } catch (e) {
       console.error('[homeDataLoader] parseAllProviders failed', e);
       rows = [];
-    }
-
-    // If filter removed all rows (remote latest might not contain our selected pairs),
-    // try loading the local sample fallback so the UI shows data.
-    if (!rows.length) {
-      console.warn('[homeDataLoader] no rows from remote latest_all.json — loading local sample fallback');
-      try {
-        const sample = await fetchJson('/latest_all_sample.json');
-        const sampleRows = filterVisibleRows(parseAllProviders(sample));
-        if (sampleRows.length) {
-          rows = sampleRows;
-          renderMeta('Yerel ornek veriler yuklendi.');
-        } else {
-          renderMeta('Son veriler mevcut fakat seçili pariteler için veri yok.');
-        }
-      } catch (eSample) {
-        console.error('[homeDataLoader] failed to load local sample fallback', eSample);
-        renderMeta('Son veriler yuklenemedi ve yerel yedek kullanılamıyor.');
-      }
     }
 
     latestLoadedRows = rows.slice();

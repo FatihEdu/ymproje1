@@ -226,21 +226,57 @@ function renderTable() {
     const freshnessClass = getFreshnessClass(row.time);
     const tr = document.createElement('tr');
     tr.className = 'bank-row';
-    tr.innerHTML = `
-      <td>${row.pair === 'XAU/TRY' ? 'ALTIN' : row.pair}</td>
-      <td>${row.providerName}</td>
-      <td>${formatNumber(row.buy)}</td>
-      <td>${formatNumber(row.sell)}</td>
-      <td>${formatNumber(row.spread)}</td>
-      <td class="${changeClass}">${formatPct(row.changePct)}</td>
-      <td class="${freshnessClass}" title="${formatShortDateTime(row.time)}">
-        <div class="freshness-cell">
-          <span class="freshness-dot"></span>
-          <span class="freshness-text">${formatRelativeTime(row.time)}</span>
-        </div>
-      </td>
-      <td><button class="btn btn-danger btn-sm" type="button" data-pair="${row.pair}" data-provider="${row.providerName}">Kaldır</button></td>
-    `;
+
+    const pairTd = document.createElement('td');
+    pairTd.textContent = row.pair === 'XAU/TRY' ? 'ALTIN' : row.pair;
+    tr.appendChild(pairTd);
+
+    const providerTd = document.createElement('td');
+    providerTd.textContent = row.providerName;
+    tr.appendChild(providerTd);
+
+    const buyTd = document.createElement('td');
+    buyTd.textContent = formatNumber(row.buy);
+    tr.appendChild(buyTd);
+
+    const sellTd = document.createElement('td');
+    sellTd.textContent = formatNumber(row.sell);
+    tr.appendChild(sellTd);
+
+    const spreadTd = document.createElement('td');
+    spreadTd.textContent = formatNumber(row.spread);
+    tr.appendChild(spreadTd);
+
+    const changeTd = document.createElement('td');
+    changeTd.className = changeClass;
+    changeTd.textContent = formatPct(row.changePct);
+    tr.appendChild(changeTd);
+
+    const freshnessTd = document.createElement('td');
+    freshnessTd.className = freshnessClass;
+    freshnessTd.title = formatShortDateTime(row.time);
+    const freshnessCell = document.createElement('div');
+    freshnessCell.className = 'freshness-cell';
+    const freshnessDot = document.createElement('span');
+    freshnessDot.className = 'freshness-dot';
+    freshnessCell.appendChild(freshnessDot);
+    const freshnessText = document.createElement('span');
+    freshnessText.className = 'freshness-text';
+    freshnessText.textContent = formatRelativeTime(row.time);
+    freshnessCell.appendChild(freshnessText);
+    freshnessTd.appendChild(freshnessCell);
+    tr.appendChild(freshnessTd);
+
+    const actionTd = document.createElement('td');
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.type = 'button';
+    removeBtn.dataset.pair = row.pair;
+    removeBtn.dataset.provider = row.providerName;
+    removeBtn.textContent = 'Kaldır';
+    actionTd.appendChild(removeBtn);
+    tr.appendChild(actionTd);
+
     body.appendChild(tr);
   }
 
