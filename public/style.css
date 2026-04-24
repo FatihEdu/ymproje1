@@ -540,18 +540,21 @@ a:hover { text-decoration: underline; }
 
 
 
+.currency-table thead th,
+.currency-table td {
+  padding: 14px 12px;
+}
+
 .currency-table thead th {
   text-align: left;
-  padding: 14px 12px;
   font-size: 0.95rem;
   color: #6b7280;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .currency-table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #eef2f7;
   font-size: 0.98rem;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .col-fav {
