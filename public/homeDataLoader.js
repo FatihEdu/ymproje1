@@ -70,7 +70,6 @@ function qs(selector) {
 // state for sorting and last loaded rows (used when user toggles sort)
 let latestLoadedRows = [];
 let currentSort = { key: null, asc: true };
-let attemptedMonthlyFallback = false;
 let latestSnapshotCache = null;
 let currentMonthlyEntriesCache = null;
 let chartLastSeries = [];
