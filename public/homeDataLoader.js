@@ -91,11 +91,6 @@ function clearSortIndicators() {
 
 function updateSortIndicator() {
   clearSortIndicators();
-  // reset neutral state for buttons
-  document.querySelectorAll('th[data-sort]').forEach((th) => {
-    const btn = th.querySelector('.sort-btn');
-    if (btn) btn.textContent = '⇅';
-  });
   if (!currentSort.key) return;
   const th = document.querySelector(`th[data-sort="${currentSort.key}"]`);
   if (th) {
