@@ -944,8 +944,6 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     const baseSnapshot = await getLatestSnapshot();
     const providerMap = createProviderMapFromSnapshot(baseSnapshot);
     const entries = await getCurrentMonthlyEntries();
-    let totalSnapshots = 0;
-
     for (const entry of entries) {
       const results = Array.isArray(entry?.results) ? entry.results : [];
       for (const result of results) {
@@ -955,7 +953,6 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
       const fullSnapshot = snapshotFromProviderMap(providerMap, entry);
       const rows = filterVisibleRows(parseAllProviders(fullSnapshot));
       const ts = new Date(entry?.runStartedAt || entry?.scheduledFor || '');
-      totalSnapshots += 1;
       if (isNaN(ts) || ts < start || ts > end) continue;
 
       const value = getPairParity(rows, pair);
