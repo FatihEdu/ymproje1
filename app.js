@@ -31,7 +31,8 @@ app.use('/', userRoutes);
 // csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
 app.use((err, req, res, next) => {
 	if (err.code === 'EBADCSRFTOKEN') {
-		return res.status(403).send('Invalid or missing CSRF token.');
+		console.warn(`[Güvenlik] Geçersiz/Eksik CSRF Token: IP ${req.ip} - Path: ${req.path}`);
+		return res.status(403).sendFile(path.join(__dirname, 'views', 'csrf-error.html'));
 	}
 	next(err);
 });
