@@ -77,6 +77,7 @@ let chartLastSeries = [];
 let chartLastPair = 'USD/TRY';
 let chartPointPixels = [];
 let chartHoverIndex = null;
+let loadingDepth = 0;
 
 function clearSortIndicators() {
   document.querySelectorAll('th[data-sort]').forEach((el) => {
@@ -135,13 +136,19 @@ function wireSortHeaders() {
 function showLoading(message = 'Yukleniyor...') {
   const overlay = qs(SELECTORS.loadingOverlay);
   const msg = qs(SELECTORS.loadingMessage);
+  loadingDepth += 1;
   if (msg) msg.textContent = message;
   if (overlay) overlay.classList.remove('hidden');
 }
 
 function hideLoading() {
   const overlay = qs(SELECTORS.loadingOverlay);
-  if (overlay) overlay.classList.add('hidden');
+  loadingDepth = Math.max(0, loadingDepth - 1);
+  if (loadingDepth === 0 && overlay) overlay.classList.add('hidden');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function formatNumber(value, fractionDigits = 4) {
@@ -917,13 +924,16 @@ function drawRangeChart(series, pair) {
   ctx.fillText(`${pair} aralik grafigi`, padding.left, 14);
 }
 
-async function loadRangeChart(startDateValue, endDateValue, pair) {
+async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) {
+  const { silentFailure = false } = options;
   const start = new Date(`${startDateValue}T00:00:00`);
   const end = new Date(`${endDateValue}T23:59:59`);
   if (isNaN(start) || isNaN(end) || start > end) {
-    renderChartMeta('Aralik gecersiz. Baslangic tarihi, bitis tarihinden buyuk olamaz.');
+    if (!silentFailure) {
+      renderChartMeta('Aralik gecersiz. Baslangic tarihi, bitis tarihinden buyuk olamaz.');
+    }
     drawRangeChart([], pair);
-    return;
+    return false;
   }
 
   showLoading(`${startDateValue} - ${endDateValue} gunluk araligi yukleniyor...`);
@@ -957,12 +967,50 @@ async function loadRangeChart(startDateValue, endDateValue, pair) {
 
     drawRangeChart(series, pair);
     renderChartMeta('');
+    return true;
   } catch (error) {
     console.error(error);
-    renderChartMeta(`Grafik yuklenemedi: ${error.message}`);
+    if (!silentFailure) {
+      renderChartMeta(`Grafik yuklenemedi: ${error.message}`);
+    }
+    return false;
   } finally {
     hideLoading();
   }
+}
+
+async function loadChartFromInputs() {
+  const startInput = qs(SELECTORS.rangeStartInput);
+  const endInput = qs(SELECTORS.rangeEndInput);
+  const startDay = startInput?.value || '';
+  const endDay = endInput?.value || '';
+  const pair = qs(SELECTORS.chartPair)?.value || 'USD/TRY';
+
+  if (!startDay || !endDay) {
+    renderChartMeta('Lutfen baslangic ve bitis tarihini secin.');
+    return false;
+  }
+
+  return loadRangeChart(startDay, endDay, pair);
+}
+
+async function loadChartFromInputsWithRetry(maxAttempts = 3) {
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    const ok = await loadRangeChart(
+      qs(SELECTORS.rangeStartInput)?.value || '',
+      qs(SELECTORS.rangeEndInput)?.value || '',
+      qs(SELECTORS.chartPair)?.value || 'USD/TRY',
+      { silentFailure: attempt < maxAttempts - 1 }
+    );
+    if (ok) return true;
+    attempt += 1;
+    if (attempt < maxAttempts) {
+      await sleep(250 * attempt);
+    }
+  }
+
+  return false;
 }
 
 export async function loadLatestData() {
@@ -1042,7 +1090,6 @@ function wireRangeLoader() {
     const endInput = qs(SELECTORS.rangeEndInput);
     const startDay = startInput?.value || '';
     const endDay = endInput?.value || '';
-    const pair = qs(SELECTORS.chartPair)?.value || 'USD/TRY';
     if (!startDay || !endDay) {
       renderChartMeta('Lutfen baslangic ve bitis tarihini secin.');
       return;
@@ -1059,7 +1106,7 @@ function wireRangeLoader() {
       return;
     }
 
-    loadRangeChart(startDay, endDay, pair);
+    void loadChartFromInputs();
   });
 }
 
@@ -1084,9 +1131,9 @@ function setCurrentYear() {
   }
 }
 
-function init() {
+async function init() {
   if (typeof setCurrentYear === 'function') setCurrentYear();
-  applyDateInputBounds();
+  const boundsPromise = applyDateInputBounds();
   if (typeof wireSortHeaders === 'function') wireSortHeaders();
   if (typeof wireRangeLoader === 'function') wireRangeLoader();
   drawRangeChart([], 'USD/TRY');
@@ -1094,12 +1141,20 @@ function init() {
   if (typeof initAuthState === 'function') {
     initAuthState()
       .then(typeof loadFavorites === 'function' ? loadFavorites : () => {})
-      .finally(() => {
-        if (typeof loadLatestData === 'function') loadLatestData();
+      .catch((error) => {
+        console.warn('[homeDataLoader] auth state could not be initialized', error?.message || error);
       });
-  } else {
-    if (typeof loadLatestData === 'function') loadLatestData();
   }
+
+  const latestPromise = typeof loadLatestData === 'function' ? loadLatestData() : Promise.resolve();
+  const chartPromise = (async () => {
+    await boundsPromise.catch((error) => {
+      console.warn('[homeDataLoader] date bounds could not be applied', error?.message || error);
+    });
+    await loadChartFromInputsWithRetry(3);
+  })();
+
+  await Promise.allSettled([latestPromise, chartPromise, boundsPromise]);
 
   // safety: if nothing loaded shortly after init, try loading latest again
   setTimeout(() => {
@@ -1111,5 +1166,7 @@ function init() {
 }
 
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    void init();
+  });
 }
