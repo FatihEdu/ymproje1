@@ -13,7 +13,6 @@ const indexTemplate    = fs.readFileSync(path.join(__dirname, '../views/index.ht
 const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
 const loginTemplate    = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
 const favsTemplate     = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
-const logoutTemplate   = fs.readFileSync(path.join(__dirname, '../views/logout.html'), 'utf8');
 const navbarTemplate        = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
 const navbarAuthLoggedin    = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedin.html'), 'utf8');
 const navbarAuthLoggedout   = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedout.html'), 'utf8');
@@ -175,11 +174,6 @@ exports.authMe = (req, res) => {
 };
 
 exports.logoutUser = (req, res) => {
-	// Build the logout page HTML before destroying the session so the navbar
-	// can still check whether the user was logged in (it will show logged-out
-	// state since the session is being destroyed anyway).
-	const logoutHtml = injectNavbar(logoutTemplate, { session: null }, res);
-
 	if (req?.session) {
 		req.session.destroy((err) => {
 			if (err) {
@@ -187,9 +181,9 @@ exports.logoutUser = (req, res) => {
 				return res.status(500).send('Error logging out');
 			}
 			res.clearCookie('connect.sid');
-			return res.send(logoutHtml);
+			return res.redirect('/');
 		});
 	} else {
-		return res.send(logoutHtml);
+		return res.redirect('/');
 	}
 };
