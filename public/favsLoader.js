@@ -73,9 +73,23 @@ async function fetchJson(url) {
   return res.json();
 }
 
+let csrfTokenCache = '';
+let csrfTokenPromise = null;
+
 async function getCsrfToken() {
-  const data = await fetchJson('/csrf-token');
-  return data?.csrfToken || '';
+  if (csrfTokenCache) return csrfTokenCache;
+  if (csrfTokenPromise) return csrfTokenPromise;
+
+  csrfTokenPromise = fetchJson('/csrf-token')
+    .then((data) => {
+      csrfTokenCache = data?.csrfToken || '';
+      return csrfTokenCache;
+    })
+    .finally(() => {
+      csrfTokenPromise = null;
+    });
+
+  return csrfTokenPromise;
 }
 
 function favoriteKey(pair, providerName) {
