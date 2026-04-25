@@ -39,7 +39,17 @@ exports.getHomePage = (req, res) => {
 
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
-	res.send(injectNavbar(registerTemplate, req, res).replace('<!--CSRF-->', tokenInput));
+	let errorHtml = '';
+	if (req.query.error === 'empty') {
+		errorHtml = '<p class="error-msg">Lütfen tüm alanları doldurun.</p>';
+	} else if (req.query.error === 'duplicate') {
+		errorHtml = '<p class="error-msg">Bu kullanıcı adı alınmış.</p>';
+	}
+	res.send(
+		injectNavbar(registerTemplate, req, res)
+			.replace('<!--CSRF-->', tokenInput)
+			.replace('<!--ERROR-->', errorHtml)
+	);
 };
 
 exports.getLoginPage = (req, res) => {
@@ -105,12 +115,12 @@ exports.registerUser = async (req, res) => {
  const { username, password } = req.body;
 
  if (!username || !password) {
- return res.status(400).send('Please fill all fields.');
+   return res.redirect('/register?error=empty');
  }
 
  const existingUser = User.getByUsername(username);
  if (existingUser) {
-   return res.status(400).send('Username already exists.');
+   return res.redirect('/register?error=duplicate');
  }
 
  const parsed = Number.parseInt(process.env.SALT_ROUNDS, 10);
