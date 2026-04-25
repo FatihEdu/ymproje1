@@ -593,8 +593,15 @@ function getAvailableDateBounds(entries) {
 }
 
 function addDays(dateOnly, days) {
-  const d = new Date(`${dateOnly}T00:00:00`);
-  d.setDate(d.getDate() + days);
+  const parts = typeof dateOnly === 'string' ? dateOnly.split('-') : [];
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (isNaN(d)) return null;
+  d.setUTCDate(d.getUTCDate() + days);
   return toDateOnlyString(d.toISOString());
 }
 
@@ -748,7 +755,7 @@ function drawRangeChart(series, pair) {
     ctx.font = '14px Segoe UI';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Secilen aralikta grafik verisi bulunamadi.', cssWidth / 2, cssHeight / 2);
+    ctx.fillText('Seçilen aralıkta grafik verisi bulunamadı.', cssWidth / 2, cssHeight / 2);
     
     // Default değerlere geri al
     ctx.textAlign = 'left';

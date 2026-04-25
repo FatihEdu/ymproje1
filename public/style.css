@@ -375,16 +375,22 @@ a:hover { text-decoration: underline; }
 .currency-table th,
 .currency-table td {
   border-bottom: 1px solid var(--border);
-  padding: .85rem .75rem;
+  padding: 14px 12px;
   text-align: left;
   white-space: nowrap;
 }
 
 .currency-table th {
-  color: var(--muted);
-  font-size: .78rem;
+  color: #6b7280;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: .04em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.currency-table td {
+  font-size: 0.98rem;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .currency-table tbody tr:nth-child(2n) td {
@@ -538,24 +544,6 @@ a:hover { text-decoration: underline; }
 .mt-3  { margin-top: .75rem; }
 .mt-5  { margin-top: 1.25rem; }
 
-
-
-.currency-table thead th,
-.currency-table td {
-  padding: 14px 12px;
-}
-
-.currency-table thead th {
-  text-align: left;
-  font-size: 0.95rem;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.currency-table td {
-  font-size: 0.98rem;
-  border-bottom: 1px solid #eef2f7;
-}
 
 .col-fav {
   width: 40px;

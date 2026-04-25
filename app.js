@@ -32,6 +32,14 @@ app.use('/', userRoutes);
 app.use((err, req, res, next) => {
 	if (err.code === 'EBADCSRFTOKEN') {
 		console.warn(`[Güvenlik] Geçersiz/Eksik CSRF Token: IP ${req.ip} - Path: ${req.path}`);
+
+		const expectsJson =
+			req.path.startsWith('/api/') ||
+			(req.accepts('json') && !req.accepts('html'));
+
+		if (expectsJson) {
+			return res.status(403).json({ error: 'Invalid CSRF token' });
+		}
 		return res.status(403).sendFile(path.join(__dirname, 'views', 'csrf-error.html'));
 	}
 	next(err);
