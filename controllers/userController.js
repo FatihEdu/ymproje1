@@ -108,6 +108,11 @@ exports.registerUser = async (req, res) => {
  return res.status(400).send('Please fill all fields.');
  }
 
+ const existingUser = User.getByUsername(username);
+ if (existingUser) {
+   return res.status(400).send('Username already exists.');
+ }
+
  const parsed = Number.parseInt(process.env.SALT_ROUNDS, 10);
  const saltRounds = Number.isFinite(parsed) && parsed >= MIN_SALT_ROUNDS && parsed <= MAX_SALT_ROUNDS
   ? parsed
@@ -141,8 +146,7 @@ exports.loginUser = async (req, res) => {
 	}
 
 	try {
-		const users = User.getAll();
-		const found = users.find((u) => u.username === username);
+		const found = User.getByUsername(username);
 		if (!found) {
 			return res.redirect('/login?error=1');
 		}
