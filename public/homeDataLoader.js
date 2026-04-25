@@ -299,7 +299,7 @@ function renderCurrencyList(rows) {
     if (!map[row.pair]) map[row.pair] = [];
     map[row.pair].push(row);
     return map;
-  }, {});
+  }, Object.create(null));
 
   const sortedPairs = Object.keys(groups).sort((a, b) => a.localeCompare(b));
 
@@ -867,7 +867,11 @@ function drawRangeChart(series, pair) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(tx, ty, w, h, 6);
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(tx, ty, w, h, 6);
+    } else {
+      ctx.rect(tx, ty, w, h);
+    }
     ctx.fill();
     ctx.stroke();
 
@@ -1149,8 +1153,15 @@ async function init() {
     drawRangeChart([], 'USD/TRY');
     renderChartMeta('');
     if (typeof initAuthState === 'function') {
+      const doLoadFavs = typeof loadFavorites === 'function' ? loadFavorites : () => {};
       initAuthState()
-        .then(typeof loadFavorites === 'function' ? loadFavorites : () => {})
+        .then(doLoadFavs)
+        .then(() => {
+          if (latestLoadedRows.length > 0) {
+            renderCurrencyList(latestLoadedRows);
+            updateSortIndicator();
+          }
+        })
         .catch((error) => {
           console.warn('[homeDataLoader] auth state could not be initialized', error?.message || error);
         });
