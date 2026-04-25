@@ -31,7 +31,9 @@ app.use('/', userRoutes);
 // csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
 app.use((err, req, res, next) => {
 	if (err.code === 'EBADCSRFTOKEN') {
-		console.warn(`[Güvenlik] Geçersiz/Eksik CSRF Token: IP ${req.ip} - Path: ${req.path}`);
+		if (process.env.DEBUG || process.env.NODE_ENV === 'development') {
+			console.warn(`[Güvenlik] Geçersiz/Eksik CSRF Token: IP ${req.ip} - Path: ${req.path}`);
+		}
 
 		const expectsJson =
 			req.path.startsWith('/api/') ||
