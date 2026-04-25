@@ -27,6 +27,11 @@ app.use(require('./middlewares/csrf')());
 // Mount the user router
 app.use('/', userRoutes);
 
+// 404 handler
+app.use((req, res, next) => {
+    res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
+});
+
 // CSRF error handler – must be defined after routes
 // csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
 app.use((err, req, res, next) => {
