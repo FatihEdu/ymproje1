@@ -112,7 +112,8 @@ exports.removeFavorite = (req, res) => {
 };
 
 exports.registerUser = async (req, res) => {
- const { username, password } = req.body;
+ const { username: rawUsername, password } = req.body;
+ const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
 
  if (!username || !password) {
    return res.redirect('/register?error=empty');
@@ -150,7 +151,8 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-	const { username, password } = req.body;
+	const { username: rawUsername, password } = req.body;
+	const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
 	if (!username || !password) {
 		return res.redirect('/login?error=1');
 	}

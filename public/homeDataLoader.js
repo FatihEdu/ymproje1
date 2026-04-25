@@ -99,16 +99,6 @@ function updateSortIndicator() {
   }
 }
 
-function sortByKey(key) {
-  if (currentSort.key === key) {
-    currentSort.asc = !currentSort.asc;
-  } else {
-    currentSort.key = key;
-    currentSort.asc = true;
-  }
-  updateSortIndicator();
-  renderCurrencyList(latestLoadedRows);
-}
 function wireSortHeaders() {
   const headers = Array.from(document.querySelectorAll('th[data-sort]'));
   headers.forEach((th) => {
@@ -941,14 +931,14 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
   const end = new Date(`${endDateValue}T23:59:59`);
   if (isNaN(start) || isNaN(end) || start > end) {
     if (!silentFailure) {
-      renderChartMeta('Aralik gecersiz. Baslangic tarihi, bitis tarihinden buyuk olamaz.');
+      renderChartMeta('Aralık geçersiz. Başlangıç tarihi, bitiş tarihinden büyük olamaz.');
     }
     drawRangeChart([], pair);
     return false;
   }
 
   if (manageLoading) {
-    showLoading(`${startDateValue} - ${endDateValue} gunluk araligi yukleniyor...`);
+    showLoading(`${startDateValue} - ${endDateValue} günlük aralığı yükleniyor...`);
   }
   try {
     const series = [];

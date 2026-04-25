@@ -433,7 +433,7 @@ a:hover { text-decoration: underline; }
 .currency-table td.up { color: var(--accent); }
 .currency-table td.down { color: var(--danger); }
 
-.currency-table td:first-child {
+.currency-table td:nth-child(2) {
   min-width: 130px;
 }
 
