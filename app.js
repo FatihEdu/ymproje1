@@ -3,6 +3,7 @@ const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const userRoutes = require('./routes/userRoutes');
+const userController = require('./controllers/userController');
 const bodyMiddleware = require('./middlewares/body');
 const sessionMiddleware = require('./middlewares/session');
 
@@ -28,9 +29,7 @@ app.use(require('./middlewares/csrf')());
 app.use('/', userRoutes);
 
 // 404 handler
-app.use((req, res, next) => {
-    res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
-});
+app.use(userController.get404Page);
 
 // CSRF error handler – must be defined after routes
 // csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
