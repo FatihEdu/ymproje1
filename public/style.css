@@ -752,3 +752,8 @@ a:hover { text-decoration: underline; }
 .hidden {
   display: none !important;
 }
+
+/* Compatibility */
+main {
+    display: block;
+}
