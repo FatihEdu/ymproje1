@@ -197,7 +197,7 @@ async function handleUndo() {
     const exists = state.favorites.some((f) => favoriteKey(f.pair, f.providerName) === favoriteKey(item.pair, item.providerName));
     if (!exists) state.favorites.push(item);
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Geri alma başarısız: ${error.message}`);
@@ -291,11 +291,11 @@ function renderTable() {
         const removed = state.favorites.find((f) => favoriteKey(f.pair, f.providerName) === key);
         state.favorites = state.favorites.filter((f) => favoriteKey(f.pair, f.providerName) !== key);
         renderTable();
-        renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+        renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
         if (removed) showUndo(removed);
       } catch (error) {
         console.error(error);
-        renderMeta(`Favori kaldirilamadi: ${error.message}`);
+        renderMeta(`Favori kaldırılamadı: ${error.message}`);
       } finally {
         btn.disabled = false;
       }
@@ -313,7 +313,7 @@ function wireControls() {
     search.addEventListener('input', () => {
       state.query = search.value || '';
       renderTable();
-      renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+      renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
     });
   }
 
@@ -350,10 +350,10 @@ async function loadFavoritesPage() {
     // Keep only favorites that still exist in latest dataset.
     state.favorites = state.favorites.filter((fav) => Boolean(findRowByFavorite(state.allRows, fav)));
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length} | Gosterilen: ${getFilteredRows().length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`Favorilerim yuklenemedi: ${error.message}`);
+    renderMeta(`Favorilerim yüklenemedi: ${error.message}`);
   }
 }
 

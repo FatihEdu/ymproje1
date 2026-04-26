@@ -117,7 +117,7 @@ function wireSortHeaders() {
   });
 }
 
-function showLoading(message = 'Yukleniyor...') {
+function showLoading(message = 'Yükleniyor...') {
   const overlay = qs(SELECTORS.loadingOverlay);
   const msg = qs(SELECTORS.loadingMessage);
   loadingDepth += 1;
@@ -408,7 +408,7 @@ function renderCurrencyList(rows) {
           renderCurrencyList(rows);
         } catch (error) {
           console.error(error);
-          renderMeta(`Favori guncellenemedi: ${error.message}`);
+          renderMeta(`Favori güncellenemedi: ${error.message}`);
         } finally {
           btn.disabled = false;
         }
@@ -436,7 +436,7 @@ async function fetchGzipText(url) {
   const buffer = await res.arrayBuffer();
 
   if (!('DecompressionStream' in globalThis)) {
-    throw new Error('Tarayici gzip acmayi desteklemiyor.');
+    throw new Error('Tarayıcı gzip açmayı desteklemiyor.');
   }
 
   const ds = new DecompressionStream('gzip');
@@ -922,7 +922,7 @@ function drawRangeChart(series, pair) {
 
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
-  ctx.fillText(`${pair} aralik grafigi`, padding.left, 14);
+  ctx.fillText(`${pair} aralık grafiği`, padding.left, 14);
 }
 
 async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) {
@@ -971,7 +971,7 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
   } catch (error) {
     console.error(error);
     if (!silentFailure) {
-      renderChartMeta(`Grafik yuklenemedi: ${error.message}`);
+      renderChartMeta(`Grafik yüklenemedi: ${error.message}`);
     }
     return false;
   } finally {
@@ -989,7 +989,7 @@ async function loadChartFromInputs() {
   const pair = qs(SELECTORS.chartPair)?.value || 'USD/TRY';
 
   if (!startDay || !endDay) {
-    renderChartMeta('Lutfen baslangic ve bitis tarihini secin.');
+    renderChartMeta('Lütfen başlangıç ve bitiş tarihini seçin.');
     return false;
   }
 
@@ -1000,7 +1000,7 @@ async function loadChartFromInputsWithRetry(maxAttempts = 3) {
   let attempt = 0;
   const startDay = qs(SELECTORS.rangeStartInput)?.value || '';
   const endDay = qs(SELECTORS.rangeEndInput)?.value || '';
-  showLoading(`${startDay} - ${endDay} gunluk araligi yukleniyor...`);
+  showLoading(`${startDay} - ${endDay} günlük aralığı yükleniyor...`);
   
   try {
     while (attempt < maxAttempts) {
@@ -1023,7 +1023,7 @@ async function loadChartFromInputsWithRetry(maxAttempts = 3) {
 }
 
 export async function loadLatestData() {
-  showLoading('Son veriler yukleniyor...');
+  showLoading('Son veriler yükleniyor...');
   try {
     const latestUrl = `${DATA_BASE_URL}/latest_all.json`;
     const latest = await fetchJson(latestUrl);
@@ -1040,10 +1040,10 @@ export async function loadLatestData() {
     updateSummaryCards(rows);
     renderCurrencyList(rows);
 
-    renderMeta(`Son guncelleme: ${formatShortDateTime(latest.runStartedAt)}`);
+    renderMeta(`Son güncelleme: ${formatShortDateTime(latest.runStartedAt)}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`Son veriler yuklenemedi: ${error.message}`);
+    renderMeta(`Son veriler yüklenemedi: ${error.message}`);
   } finally {
     hideLoading();
   }
@@ -1051,11 +1051,11 @@ export async function loadLatestData() {
 
 export async function loadMonthlyData(monthKey) {
   if (!/^\d{4}-\d{2}$/.test(monthKey)) {
-    renderMeta('Ay formati gecersiz. Ornek: 2026-04');
+    renderMeta('Ay formatı geçersiz. Örnek: 2026-04');
     return;
   }
 
-  showLoading(`${monthKey} ayi yukleniyor...`);
+  showLoading(`${monthKey} ayı yükleniyor...`);
   try {
     let jsonlText = '';
     const currentPath = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
@@ -1070,7 +1070,7 @@ export async function loadMonthlyData(monthKey) {
 
     const entries = parseJsonl(jsonlText);
     if (!entries.length) {
-      renderMeta(`${monthKey} icin veri bulunamadi.`);
+      renderMeta(`${monthKey} için veri bulunamadı.`);
       renderCurrencyList([]);
       return;
     }
@@ -1081,10 +1081,10 @@ export async function loadMonthlyData(monthKey) {
     latestLoadedRows = rows.slice();
     updateSummaryCards(rows);
     renderCurrencyList(rows);
-    renderMeta(`${monthKey} yuklendi | Snapshot sayisi: ${entries.length} | Son run: ${latestEntry.runStartedAt || '-'}`);
+    renderMeta(`${monthKey} yüklendi | Snapshot sayısı: ${entries.length} | Son run: ${latestEntry.runStartedAt || '-'}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`${monthKey} yuklenemedi: ${error.message}`);
+    renderMeta(`${monthKey} yüklenemedi: ${error.message}`);
   } finally {
     hideLoading();
   }
@@ -1100,18 +1100,18 @@ function wireRangeLoader() {
     const startDay = startInput?.value || '';
     const endDay = endInput?.value || '';
     if (!startDay || !endDay) {
-      renderChartMeta('Lutfen baslangic ve bitis tarihini secin.');
+      renderChartMeta('Lütfen başlangıç ve bitiş tarihini seçin.');
       return;
     }
 
     const minDay = startInput?.min || endInput?.min || '';
     const maxDay = startInput?.max || endInput?.max || '';
     if (minDay && (startDay < minDay || endDay < minDay)) {
-      renderChartMeta(`Bu kaynakta en eski tarih ${minDay}. Daha onceki gunler secilemez.`);
+      renderChartMeta(`Bu kaynakta en eski tarih ${minDay}. Daha önceki günler seçilemez.`);
       return;
     }
     if (maxDay && (startDay > maxDay || endDay > maxDay)) {
-      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrasi secilemez.`);
+      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrası seçilemez.`);
       return;
     }
 
@@ -1141,7 +1141,7 @@ function setCurrentYear() {
 }
 
 async function init() {
-  showLoading('Sayfa hazirlaniyor...');
+  showLoading('Sayfa hazırlanıyor...');
   try {
     if (typeof setCurrentYear === 'function') setCurrentYear();
     const boundsPromise = applyDateInputBounds();
