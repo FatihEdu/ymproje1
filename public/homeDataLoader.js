@@ -1111,7 +1111,7 @@ function wireRangeLoader() {
       return;
     }
     if (maxDay && (startDay > maxDay || endDay > maxDay)) {
-      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrasi secilemez.`);
+      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrası seçilemez.`);
       return;
     }
 
