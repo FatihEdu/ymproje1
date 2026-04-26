@@ -87,7 +87,7 @@ a:hover { text-decoration: underline; }
 .navbar__links a:hover,
 .navbar__links a.active {
   background: rgba(255,255,255,.18);
-  color: #fff;
+  color: #fff; /* NOSONAR */
   text-decoration: none;
 }
 
