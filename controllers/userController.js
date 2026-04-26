@@ -13,6 +13,7 @@ const indexTemplate    = fs.readFileSync(path.join(__dirname, '../views/index.ht
 const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
 const loginTemplate    = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
 const favsTemplate     = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
+const notFoundTemplate = fs.readFileSync(path.join(__dirname, '../views/404.html'), 'utf8');
 const navbarTemplate        = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
 const navbarAuthLoggedin    = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedin.html'), 'utf8');
 const navbarAuthLoggedout   = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedout.html'), 'utf8');
@@ -36,7 +37,9 @@ function injectNavbar(template, req, res) {
 exports.getHomePage = (req, res) => {
 	res.send(injectNavbar(indexTemplate, req, res));
 };
-
+exports.get404Page = (req, res) => {
+	res.status(404).send(injectNavbar(notFoundTemplate, req, res));
+};
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
 	let errorHtml = '';
