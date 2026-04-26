@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oturum Hatası</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .message-container {
+      text-align: center;
+      margin-top: 10vh;
+      padding: 40px 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .message-container h2 {
+      color: #e53e3e;
+      margin-bottom: 20px;
+    }
+    .message-container p {
+      font-size: 1.1rem;
+      color: #333;
+      line-height: 1.5;
+    }
+    .message-container a {
+      display: inline-block;
+      margin-top: 20px;
+      color: #3182ce;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .message-container a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body style="background-color: #f7fafc;">
+  <main class="page">
+    <div class="message-container">
+      <h2>İşlem Başarısız</h2>
+      <p>Oturumunuz sonlanmış veya form doğrulaması geçerliliğini yitirmiş.</p>
+      <p>Sizi <strong id="countdown">5</strong> saniye içerisinde ana sayfaya yönlendiriyoruz...</p>
+      <a href="/">Beklemek istemiyorsanız buraya tıklayın.</a>
+    </div>
+  </main>
+
+  <script>
+    let timeLeft = 5;
+    const countdownEl = document.getElementById('countdown');
+    const timer = setInterval(() => {
+      timeLeft--;
+      countdownEl.innerText = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        window.location.href = '/';
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

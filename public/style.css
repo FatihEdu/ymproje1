@@ -317,11 +317,48 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
+.range-loader {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.range-label {
+  font-size: .8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .month-loader input[type="month"] {
   padding: .45rem .55rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: .85rem;
+}
+
+.range-loader input[type="month"],
+.range-loader input[type="date"],
+.range-loader select {
+  padding: .45rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .85rem;
+  background: #fff;
+}
+
+.chart-wrap {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: .75rem;
+}
+
+#range-chart {
+  width: 100%;
+  height: 280px;
+  display: block;
 }
 
 .currency-table-wrap {
@@ -332,21 +369,79 @@ a:hover { text-decoration: underline; }
   width: 100%;
   border-collapse: collapse;
   font-size: .88rem;
+  background: #fff;
 }
 
 .currency-table th,
 .currency-table td {
   border-bottom: 1px solid var(--border);
-  padding: .6rem .5rem;
+  padding: 14px 12px;
   text-align: left;
   white-space: nowrap;
 }
 
 .currency-table th {
-  color: var(--muted);
-  font-size: .78rem;
+  color: #6b7280;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: .04em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.currency-table td {
+  font-size: 0.98rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.currency-table tbody tr:nth-child(2n) td {
+  background: #fcfdff;
+}
+
+.currency-group-row td {
+  border-bottom: 1px solid var(--border);
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 1rem;
+  border-left: 5px solid #2563eb;
+  padding: 18px 12px;
+}
+
+.currency-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 700;
+  color: var(--brand-dark);
+}
+
+.currency-group__name {
+  font-size: .95rem;
+}
+
+.currency-group__info {
+  font-size: .82rem;
+  color: var(--muted);
+}
+
+.currency-table td.up,
+.currency-table td.down {
+  font-weight: 700;
+}
+
+.currency-table td.up { color: var(--accent); }
+.currency-table td.down { color: var(--danger); }
+
+.currency-table td:nth-child(2) {
+  min-width: 130px;
+}
+
+@media (max-width: 900px) {
+  .currency-table th,
+  .currency-table td {
+    padding: .7rem .55rem;
+  }
 }
 
 /* ---------- Placeholder / coming-soon ---------- */
@@ -448,3 +543,212 @@ a:hover { text-decoration: underline; }
 .text-muted  { color: var(--muted); }
 .mt-3  { margin-top: .75rem; }
 .mt-5  { margin-top: 1.25rem; }
+
+
+.col-fav {
+  width: 40px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.fav-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .15s ease, color .15s ease, background .15s ease;
+}
+
+.fav-btn:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  transform: scale(1.06);
+}
+
+.fav-btn.is-active {
+  color: #f59e0b;
+}
+
+.fav-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.group-star {
+  margin-right: 10px;
+  color: #94a3b8;
+}
+
+.group-title {
+  font-weight: 700;
+}
+
+.bank-row:hover {
+  background: #f8fafc;
+}
+
+
+.change-positive {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.change-negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.change-neutral {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* Sortable header */
+.th-sortable { cursor: pointer; user-select: none; }
+.th-sortable .sort-indicator { display: none; }
+
+/* explicit sort button */
+.sort-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: .35rem;
+  font-size: .95rem;
+  color: var(--muted);
+  line-height: 1;
+}
+.sort-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.fav-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.th-sortable.asc .sort-btn { color: var(--brand); }
+.th-sortable.desc .sort-btn { color: var(--muted); }
+
+/* ---------- Freshness indicator (last-updated) ---------- */
+.freshness-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.freshness-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9ca3af; /* fallback grey */
+  flex: 0 0 10px;
+  box-shadow: 0 0 0 4px rgba(156,163,175,0.06);
+}
+
+.freshness-text {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.freshness--fresh .freshness-dot {
+  background: #16a34a;
+}
+.freshness--fresh .freshness-text {
+  color: #065f46;
+}
+
+.freshness--warn .freshness-dot {
+  background: #f59e0b;
+}
+.freshness--warn .freshness-text {
+  color: #92400e;
+}
+
+.freshness--stale .freshness-dot {
+  background: #ef4444;
+}
+.freshness--stale .freshness-text {
+  color: #7f1d1d;
+}
+
+.freshness--unknown .freshness-dot {
+  background: #9ca3af;
+}
+.freshness--unknown .freshness-text {
+  color: var(--muted);
+}
+
+/* ---------- Favorites toolbar + undo ---------- */
+.favs-toolbar {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: .25rem;
+  text-decoration: none;
+}
+
+.favs-toolbar input,
+.favs-toolbar select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .5rem .65rem;
+  font-size: .9rem;
+  background: #fff;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: none;
+  outline: none;
+  text-decoration: none;
+}
+
+.favs-toolbar input {
+  min-width: 220px;
+  flex: 1 1 240px;
+}
+
+.favs-toolbar input:focus,
+.favs-toolbar select:focus,
+.favs-toolbar .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.favs-toolbar .btn {
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.favs-meta {
+  text-decoration: none;
+}
+
+.favs-toolbar,
+.favs-toolbar * {
+  text-decoration: none;
+}
+
+.favs-undo {
+  margin-top: .9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem .8rem;
+  border-radius: var(--radius);
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.hidden {
+  display: none !important;
+}
