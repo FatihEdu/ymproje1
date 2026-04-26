@@ -37,7 +37,7 @@ exports.getHomePage = (req, res) => {
 	res.send(injectNavbar(indexTemplate, req, res));
 };
 exports.get404Page = (req, res) => {
-        res.status(404).send(injectNavbar(notFoundTemplate, req, res));
+	res.status(404).send(injectNavbar(notFoundTemplate, req, res));
 };
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
