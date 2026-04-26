@@ -1,3 +1,43 @@
+function formatRelativeTime(dateString) {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  if (isNaN(d)) return '-';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'şimdi';
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffMin < 60) return `${diffMin} dk önce`;
+  if (diffHour < 24) return `${diffHour} saat önce`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} gün önce`;
+  // 7 gün ve fazlası için kısa tarih göster
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+function formatShortDateTime(dateString) {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  if (isNaN(d)) return '-';
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getFreshnessClass(dateString) {
+  if (!dateString) return 'freshness--unknown';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'freshness--unknown';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 1000 / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffMin < 60 * 24) return 'freshness--fresh';
+  if (diffDay < 7) return 'freshness--warn';
+  return 'freshness--stale';
+}
 import { parseAllProviders } from './scrapeClientParser.js';
 
 const DATA_BASE_URL = globalThis.__SCRAPE_BASE_URL__ || 'https://fatihedu.github.io/ymproje1';
@@ -13,8 +53,12 @@ const SELECTORS = {
   goldChange: '#chg-gold',
   listBody: '#currency-list-body',
   listMeta: '#currency-list-meta',
-  monthInput: '#month-input',
-  monthButton: '#month-load-btn',
+  rangeStartInput: '#range-start-date',
+  rangeEndInput: '#range-end-date',
+  rangeButton: '#range-load-btn',
+  chartPair: '#chart-pair',
+  chartCanvas: '#range-chart',
+  chartMeta: '#chart-meta',
   loadingOverlay: '#loading-overlay',
   loadingMessage: '#loading-message'
 };
@@ -91,13 +135,19 @@ function wireSortHeaders() {
 function showLoading(message = 'Yukleniyor...') {
   const overlay = qs(SELECTORS.loadingOverlay);
   const msg = qs(SELECTORS.loadingMessage);
+  loadingDepth += 1;
   if (msg) msg.textContent = message;
   if (overlay) overlay.classList.remove('hidden');
 }
 
 function hideLoading() {
   const overlay = qs(SELECTORS.loadingOverlay);
-  if (overlay) overlay.classList.add('hidden');
+  loadingDepth = Math.max(0, loadingDepth - 1);
+  if (loadingDepth === 0 && overlay) overlay.classList.add('hidden');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function formatNumber(value, fractionDigits = 4) {
@@ -194,7 +244,7 @@ async function fetchGzipText(url) {
   const buffer = await res.arrayBuffer();
 
   if (!('DecompressionStream' in globalThis)) {
-    throw new Error('Tarayici gzip acmayi desteklemiyor.');
+    throw new Error('Tarayıcı gzip açmayı desteklemiyor.');
   }
 
   const ds = new DecompressionStream('gzip');
@@ -818,19 +868,27 @@ async function loadRangeChart(startDateValue, endDateValue, pair) {
 
 >>>>>>> local
 export async function loadLatestData() {
-  showLoading('Son veriler yukleniyor...');
+  showLoading('Son veriler yükleniyor...');
   try {
     const latestUrl = `${DATA_BASE_URL}/latest_all.json`;
     const latest = await fetchJson(latestUrl);
-    const rows = parseAllProviders(latest);
+    latestSnapshotCache = latest;
+    let rows = [];
+    try {
+      rows = filterVisibleRows(parseAllProviders(latest));
+    } catch (e) {
+      console.error('[homeDataLoader] parseAllProviders failed', e);
+      rows = [];
+    }
 
+    latestLoadedRows = rows.slice();
     updateSummaryCards(rows);
     renderCurrencyList(rows);
 
-    renderMeta(`Son guncelleme: ${latest.runStartedAt || '-'} | Kayit sayisi: ${rows.length}`);
+    renderMeta(`Son güncelleme: ${formatShortDateTime(latest.runStartedAt)}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`Son veriler yuklenemedi: ${error.message}`);
+    renderMeta(`Son veriler yüklenemedi: ${error.message}`);
   } finally {
     hideLoading();
   }
@@ -838,11 +896,11 @@ export async function loadLatestData() {
 
 export async function loadMonthlyData(monthKey) {
   if (!/^\d{4}-\d{2}$/.test(monthKey)) {
-    renderMeta('Ay formati gecersiz. Ornek: 2026-04');
+    renderMeta('Ay formatı geçersiz. Örnek: 2026-04');
     return;
   }
 
-  showLoading(`${monthKey} ayi yukleniyor...`);
+  showLoading(`${monthKey} ayı yükleniyor...`);
   try {
     let jsonlText = '';
     const currentPath = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
@@ -857,55 +915,124 @@ export async function loadMonthlyData(monthKey) {
 
     const entries = parseJsonl(jsonlText);
     if (!entries.length) {
-      renderMeta(`${monthKey} icin veri bulunamadi.`);
+      renderMeta(`${monthKey} için veri bulunamadı.`);
       renderCurrencyList([]);
       return;
     }
 
     const latestEntry = entries[entries.length - 1];
-    const rows = parseAllProviders(latestEntry);
+    const rows = filterVisibleRows(parseAllProviders(latestEntry));
 
+    latestLoadedRows = rows.slice();
     updateSummaryCards(rows);
     renderCurrencyList(rows);
-    renderMeta(`${monthKey} yuklendi | Snapshot sayisi: ${entries.length} | Son run: ${latestEntry.runStartedAt || '-'}`);
+    renderMeta(`${monthKey} yüklendi | Snapshot sayısı: ${entries.length} | Son run: ${latestEntry.runStartedAt || '-'}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`${monthKey} yuklenemedi: ${error.message}`);
+    renderMeta(`${monthKey} yüklenemedi: ${error.message}`);
   } finally {
     hideLoading();
   }
 }
 
-function getSelectedMonthKey() {
-  const monthInput = qs(SELECTORS.monthInput);
-  return monthInput?.value || '';
-}
-
-function wireMonthLoader() {
-  const button = qs(SELECTORS.monthButton);
+function wireRangeLoader() {
+  const button = qs(SELECTORS.rangeButton);
   if (!button) return;
 
   button.addEventListener('click', () => {
-    const monthKey = getSelectedMonthKey();
-    if (!monthKey) {
-      renderMeta('Lutfen once bir ay secin.');
+    const startInput = qs(SELECTORS.rangeStartInput);
+    const endInput = qs(SELECTORS.rangeEndInput);
+    const startDay = startInput?.value || '';
+    const endDay = endInput?.value || '';
+    if (!startDay || !endDay) {
+      renderChartMeta('Lütfen başlangıç ve bitiş tarihini seçin.');
       return;
     }
-    loadMonthlyData(monthKey);
+
+    const minDay = startInput?.min || endInput?.min || '';
+    const maxDay = startInput?.max || endInput?.max || '';
+    if (minDay && (startDay < minDay || endDay < minDay)) {
+      renderChartMeta(`Bu kaynakta en eski tarih ${minDay}. Daha önceki günler seçilemez.`);
+      return;
+    }
+    if (maxDay && (startDay > maxDay || endDay > maxDay)) {
+      renderChartMeta(`Bu kaynakta en yeni tarih ${maxDay}. Daha sonrası seçilemez.`);
+      return;
+    }
+
+    void loadChartFromInputs();
   });
 }
 
 function setCurrentYear() {
   const el = document.getElementById('year');
-  if (el) el.textContent = new Date().getFullYear();
+  const now = new Date();
+  if (el) el.textContent = now.getFullYear();
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const prevDate = new Date(now);
+  prevDate.setDate(now.getDate() - 7);
+  const weekAgo = `${prevDate.getFullYear()}-${pad(prevDate.getMonth() + 1)}-${pad(prevDate.getDate())}`;
+
+  const rangeStartInput = qs(SELECTORS.rangeStartInput);
+  const rangeEndInput = qs(SELECTORS.rangeEndInput);
+  if (rangeStartInput && !rangeStartInput.value) {
+    rangeStartInput.value = weekAgo;
+  }
+  if (rangeEndInput && !rangeEndInput.value) {
+    rangeEndInput.value = today;
+  }
 }
 
-function init() {
-  setCurrentYear();
-  wireMonthLoader();
-  loadLatestData();
+async function init() {
+  showLoading('Sayfa hazırlanıyor...');
+  try {
+    if (typeof setCurrentYear === 'function') setCurrentYear();
+    const boundsPromise = applyDateInputBounds();
+    if (typeof wireSortHeaders === 'function') wireSortHeaders();
+    if (typeof wireRangeLoader === 'function') wireRangeLoader();
+    drawRangeChart([], 'USD/TRY');
+    renderChartMeta('');
+    if (typeof initAuthState === 'function') {
+      const doLoadFavs = typeof loadFavorites === 'function' ? loadFavorites : () => {};
+      initAuthState()
+        .then(doLoadFavs)
+        .then(() => {
+          if (latestLoadedRows.length > 0) {
+            renderCurrencyList(latestLoadedRows);
+            updateSortIndicator();
+          }
+        })
+        .catch((error) => {
+          console.warn('[homeDataLoader] auth state could not be initialized', error?.message || error);
+        });
+    }
+
+    const latestPromise = typeof loadLatestData === 'function' ? loadLatestData() : Promise.resolve();
+    const chartPromise = (async () => {
+      await boundsPromise.catch((error) => {
+        console.warn('[homeDataLoader] date bounds could not be applied', error?.message || error);
+      });
+      await loadChartFromInputsWithRetry(3);
+    })();
+
+    await Promise.allSettled([latestPromise, chartPromise, boundsPromise]);
+
+    // safety: if nothing loaded shortly after init, try loading latest again
+    setTimeout(() => {
+      if ((!latestLoadedRows || latestLoadedRows.length === 0) && typeof loadLatestData === 'function') {
+        console.warn('[homeDataLoader] no rows after init — retrying loadLatestData');
+        loadLatestData();
+      }
+    }, 1200);
+  } finally {
+    hideLoading();
+  }
 }
 
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    void init();
+  });
 }

@@ -13,7 +13,7 @@ const indexTemplate    = fs.readFileSync(path.join(__dirname, '../views/index.ht
 const registerTemplate = fs.readFileSync(path.join(__dirname, '../views/register.html'), 'utf8');
 const loginTemplate    = fs.readFileSync(path.join(__dirname, '../views/login.html'), 'utf8');
 const favsTemplate     = fs.readFileSync(path.join(__dirname, '../views/favs.html'), 'utf8');
-const logoutTemplate   = fs.readFileSync(path.join(__dirname, '../views/logout.html'), 'utf8');
+const notFoundTemplate = fs.readFileSync(path.join(__dirname, '../views/404.html'), 'utf8');
 const navbarTemplate        = fs.readFileSync(path.join(__dirname, '../views/navbar.html'), 'utf8');
 const navbarAuthLoggedin    = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedin.html'), 'utf8');
 const navbarAuthLoggedout   = fs.readFileSync(path.join(__dirname, '../views/navbar-auth-loggedout.html'), 'utf8');
@@ -37,10 +37,22 @@ function injectNavbar(template, req, res) {
 exports.getHomePage = (req, res) => {
 	res.send(injectNavbar(indexTemplate, req, res));
 };
-
+exports.get404Page = (req, res) => {
+	res.status(404).send(injectNavbar(notFoundTemplate, req, res));
+};
 exports.getRegisterPage = (req, res) => {
 	const tokenInput = `<input type="hidden" name="_csrf" value="${generateCsrfToken(req, res)}">`;
-	res.send(injectNavbar(registerTemplate, req, res).replace('<!--CSRF-->', tokenInput));
+	let errorHtml = '';
+	if (req.query.error === 'empty') {
+		errorHtml = '<p class="error-msg">Lütfen tüm alanları doldurun.</p>';
+	} else if (req.query.error === 'duplicate') {
+		errorHtml = '<p class="error-msg">Bu kullanıcı adı alınmış.</p>';
+	}
+	res.send(
+		injectNavbar(registerTemplate, req, res)
+			.replace('<!--CSRF-->', tokenInput)
+			.replace('<!--ERROR-->', errorHtml)
+	);
 };
 
 exports.getLoginPage = (req, res) => {
@@ -54,11 +66,65 @@ exports.getFavsPage = (req, res) => {
 	res.send(injectNavbar(favsTemplate, req, res).replace('<!--CSRF-->', tokenInput));
 };
 
+exports.getCsrfToken = (req, res) => {
+	res.set('Cache-Control', 'no-store');
+	res.set('Pragma', 'no-cache');
+	return res.json({ csrfToken: generateCsrfToken(req, res) });
+};
+
+exports.getFavorites = (req, res) => {
+	const username = req?.session?.user?.username;
+	if (!username) return res.status(401).json({ error: 'Unauthorized' });
+
+	const favorites = User.getFavorites(username);
+	return res.json({ favorites });
+};
+
+exports.addFavorite = (req, res) => {
+	const username = req?.session?.user?.username;
+	if (!username) return res.status(401).json({ error: 'Unauthorized' });
+
+	const pair = (req.body?.pair || '').trim();
+	const providerName = (req.body?.providerName || '').trim();
+
+	if (!pair || !providerName) {
+		return res.status(400).json({ error: 'pair and providerName are required' });
+	}
+
+	const ok = User.addFavorite(username, { pair, providerName });
+	if (!ok) return res.status(404).json({ error: 'User not found' });
+
+	return res.json({ ok: true, favorites: User.getFavorites(username) });
+};
+
+exports.removeFavorite = (req, res) => {
+	const username = req?.session?.user?.username;
+	if (!username) return res.status(401).json({ error: 'Unauthorized' });
+
+	const pair = (req.body?.pair || '').trim();
+	const providerName = (req.body?.providerName || '').trim();
+
+	if (!pair || !providerName) {
+		return res.status(400).json({ error: 'pair and providerName are required' });
+	}
+
+	const ok = User.removeFavorite(username, { pair, providerName });
+	if (!ok) return res.status(404).json({ error: 'User not found' });
+
+	return res.json({ ok: true, favorites: User.getFavorites(username) });
+};
+
 exports.registerUser = async (req, res) => {
- const { username, password } = req.body;
+ const { username: rawUsername, password } = req.body;
+ const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
 
  if (!username || !password) {
- return res.status(400).send('Please fill all fields.');
+   return res.redirect('/register?error=empty');
+ }
+
+ const existingUser = User.getByUsername(username);
+ if (existingUser) {
+   return res.redirect('/register?error=duplicate');
  }
 
  const parsed = Number.parseInt(process.env.SALT_ROUNDS, 10);
@@ -88,14 +154,14 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-	const { username, password } = req.body;
+	const { username: rawUsername, password } = req.body;
+	const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
 	if (!username || !password) {
 		return res.redirect('/login?error=1');
 	}
 
 	try {
-		const users = User.getAll();
-		const found = users.find((u) => u.username === username);
+		const found = User.getByUsername(username);
 		if (!found) {
 			return res.redirect('/login?error=1');
 		}
@@ -129,11 +195,6 @@ exports.authMe = (req, res) => {
 };
 
 exports.logoutUser = (req, res) => {
-	// Build the logout page HTML before destroying the session so the navbar
-	// can still check whether the user was logged in (it will show logged-out
-	// state since the session is being destroyed anyway).
-	const logoutHtml = injectNavbar(logoutTemplate, { session: null }, res);
-
 	if (req?.session) {
 		req.session.destroy((err) => {
 			if (err) {
@@ -141,9 +202,9 @@ exports.logoutUser = (req, res) => {
 				return res.status(500).send('Error logging out');
 			}
 			res.clearCookie('connect.sid');
-			return res.send(logoutHtml);
+			return res.redirect('/');
 		});
 	} else {
-		return res.send(logoutHtml);
+		return res.redirect('/');
 	}
 };
