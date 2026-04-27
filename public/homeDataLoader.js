@@ -786,6 +786,17 @@ function drawRangeChart(seriesArg, pair) {
   const plotHeight = cssHeight - padding.top - padding.bottom;
 
   const values = seriesList.flatMap((s) => s.data.map((p) => p.value)).filter(Number.isFinite);
+  if (values.length === 0) {
+    chartPointPixels = [];
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '14px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Seçilen aralıkta grafik verisi bulunamadı.', cssWidth / 2, cssHeight / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
   const rawRange = rawMax - rawMin || 1;
@@ -1100,8 +1111,17 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
 
     for (let i = 0; i < snapshots.length; i += 1) {
       const s = snapshots[i];
+      const rowsByProvider = new Map();
+      for (const r of (s.rows || [])) {
+        const bucket = rowsByProvider.get(r.providerId);
+        if (bucket) {
+          bucket.push(r);
+        } else {
+          rowsByProvider.set(r.providerId, [r]);
+        }
+      }
       for (const ps of providerSeries) {
-        const provRows = (s.rows || []).filter((r) => r.providerId === ps.id);
+        const provRows = rowsByProvider.get(ps.id) || [];
         const v = getPairParity(provRows, pair);
         ps.data.push({ label: labels[i], value: Number.isFinite(v) ? v : null });
       }
