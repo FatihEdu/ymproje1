@@ -836,23 +836,40 @@ function drawRangeChart(seriesArg, pair) {
     gradient.addColorStop(0, 'rgba(26, 86, 219, 0.20)');
     gradient.addColorStop(1, 'rgba(26, 86, 219, 0.02)');
     ctx.fillStyle = gradient;
-    ctx.beginPath();
+    const baselineY = padding.top + plotHeight;
     let firstX = null;
+    let lastX = null;
+    let started = false;
     for (let i = 0; i < avgSeries.data.length; i += 1) {
       const p = avgSeries.data[i];
-      if (!Number.isFinite(p.value)) continue;
+      if (!Number.isFinite(p.value)) {
+        if (started) {
+          ctx.lineTo(lastX, baselineY);
+          ctx.lineTo(firstX, baselineY);
+          ctx.closePath();
+          ctx.fill();
+          started = false;
+          firstX = null;
+          lastX = null;
+        }
+        continue;
+      }
       const x = xFor(i);
       const y = yFor(p.value);
-      if (firstX == null) {
-        ctx.moveTo(x, y);
+      if (!started) {
+        ctx.beginPath();
+        ctx.moveTo(x, baselineY);
+        ctx.lineTo(x, y);
         firstX = x;
+        started = true;
       } else {
         ctx.lineTo(x, y);
       }
+      lastX = x;
     }
-    if (firstX != null) {
-      ctx.lineTo(xFor(avgSeries.data.length - 1), padding.top + plotHeight);
-      ctx.lineTo(firstX, padding.top + plotHeight);
+    if (started) {
+      ctx.lineTo(lastX, baselineY);
+      ctx.lineTo(firstX, baselineY);
       ctx.closePath();
       ctx.fill();
     }
