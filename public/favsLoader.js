@@ -70,9 +70,23 @@ async function fetchJson(url) {
   return res.json();
 }
 
+let csrfTokenCache = '';
+let csrfTokenPromise = null;
+
 async function getCsrfToken() {
-  const data = await fetchJson('/csrf-token');
-  return data?.csrfToken || '';
+  if (csrfTokenCache) return csrfTokenCache;
+  if (csrfTokenPromise) return csrfTokenPromise;
+
+  csrfTokenPromise = fetchJson('/csrf-token')
+    .then((data) => {
+      csrfTokenCache = data?.csrfToken || '';
+      return csrfTokenCache;
+    })
+    .finally(() => {
+      csrfTokenPromise = null;
+    });
+
+  return csrfTokenPromise;
 }
 
 function favoriteKey(pair, providerName) {
@@ -159,7 +173,7 @@ async function handleUndo() {
     const exists = state.favorites.some((f) => favoriteKey(f.pair, f.providerName) === favoriteKey(item.pair, item.providerName));
     if (!exists) state.favorites.push(item);
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Geri alma başarısız: ${error.message}`);
@@ -188,21 +202,57 @@ function renderTable() {
     const freshnessClass = getFreshnessClass(row.time);
     const tr = document.createElement('tr');
     tr.className = 'bank-row';
-    tr.innerHTML = `
-      <td>${row.pair === 'XAU/TRY' ? 'ALTIN' : row.pair}</td>
-      <td>${row.providerName}</td>
-      <td>${formatNumber(row.buy)}</td>
-      <td>${formatNumber(row.sell)}</td>
-      <td>${formatNumber(row.spread)}</td>
-      <td class="${changeClass}">${formatPct(row.changePct)}</td>
-      <td class="${freshnessClass}" title="${formatShortDateTime(row.time)}">
-        <div class="freshness-cell">
-          <span class="freshness-dot"></span>
-          <span class="freshness-text">${formatRelativeTime(row.time)}</span>
-        </div>
-      </td>
-      <td><button class="btn btn-danger btn-sm" type="button" data-pair="${row.pair}" data-provider="${row.providerName}">Kaldır</button></td>
-    `;
+
+    const pairTd = document.createElement('td');
+    pairTd.textContent = row.pair === 'XAU/TRY' ? 'ALTIN' : row.pair;
+    tr.appendChild(pairTd);
+
+    const providerTd = document.createElement('td');
+    providerTd.textContent = row.providerName;
+    tr.appendChild(providerTd);
+
+    const buyTd = document.createElement('td');
+    buyTd.textContent = formatNumber(row.buy);
+    tr.appendChild(buyTd);
+
+    const sellTd = document.createElement('td');
+    sellTd.textContent = formatNumber(row.sell);
+    tr.appendChild(sellTd);
+
+    const spreadTd = document.createElement('td');
+    spreadTd.textContent = formatNumber(row.spread);
+    tr.appendChild(spreadTd);
+
+    const changeTd = document.createElement('td');
+    changeTd.className = changeClass;
+    changeTd.textContent = formatPct(row.changePct);
+    tr.appendChild(changeTd);
+
+    const freshnessTd = document.createElement('td');
+    freshnessTd.className = freshnessClass;
+    freshnessTd.title = formatShortDateTime(row.time);
+    const freshnessCell = document.createElement('div');
+    freshnessCell.className = 'freshness-cell';
+    const freshnessDot = document.createElement('span');
+    freshnessDot.className = 'freshness-dot';
+    freshnessCell.appendChild(freshnessDot);
+    const freshnessText = document.createElement('span');
+    freshnessText.className = 'freshness-text';
+    freshnessText.textContent = formatRelativeTime(row.time);
+    freshnessCell.appendChild(freshnessText);
+    freshnessTd.appendChild(freshnessCell);
+    tr.appendChild(freshnessTd);
+
+    const actionTd = document.createElement('td');
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.type = 'button';
+    removeBtn.dataset.pair = row.pair;
+    removeBtn.dataset.provider = row.providerName;
+    removeBtn.textContent = 'Kaldır';
+    actionTd.appendChild(removeBtn);
+    tr.appendChild(actionTd);
+
     body.appendChild(tr);
   }
 
@@ -217,11 +267,11 @@ function renderTable() {
         const removed = state.favorites.find((f) => favoriteKey(f.pair, f.providerName) === key);
         state.favorites = state.favorites.filter((f) => favoriteKey(f.pair, f.providerName) !== key);
         renderTable();
-        renderMeta(`Toplam favori: ${state.favorites.length}`);
+        renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
         if (removed) showUndo(removed);
       } catch (error) {
         console.error(error);
-        renderMeta(`Favori kaldirilamadi: ${error.message}`);
+        renderMeta(`Favori kaldırılamadı: ${error.message}`);
       } finally {
         btn.disabled = false;
       }
@@ -231,6 +281,29 @@ function renderTable() {
 
 function wireControls() {
   const undoBtn = qs('#favs-undo-btn');
+
+  if (search) {
+    search.addEventListener('input', () => {
+      state.query = search.value || '';
+      renderTable();
+      renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
+    });
+  }
+
+  if (sort) {
+    sort.addEventListener('change', () => {
+      state.sortKey = sort.value;
+      renderTable();
+    });
+  }
+
+  if (dir) {
+    dir.addEventListener('click', () => {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      dir.textContent = state.sortDir === 'asc' ? 'Artan ↑' : 'Azalan ↓';
+      renderTable();
+    });
+  }
 
   if (undoBtn) {
     undoBtn.addEventListener('click', handleUndo);
@@ -250,10 +323,10 @@ async function loadFavoritesPage() {
     // Keep only favorites that still exist in latest dataset.
     state.favorites = state.favorites.filter((fav) => Boolean(findRowByFavorite(state.allRows, fav)));
     renderTable();
-    renderMeta(`Toplam favori: ${state.favorites.length}`);
+    renderMeta(`Toplam favori: ${state.favorites.length} | Gösterilen: ${getFilteredRows().length}`);
   } catch (error) {
     console.error(error);
-    renderMeta(`Favorilerim yuklenemedi: ${error.message}`);
+    renderMeta(`Favorilerim yüklenemedi: ${error.message}`);
   }
 }
 
