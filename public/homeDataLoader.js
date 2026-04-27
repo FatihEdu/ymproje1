@@ -720,11 +720,39 @@ function ensureChartHoverEvents(canvas) {
   canvas.dataset.hoverBound = '1';
 }
 
-function drawRangeChart(series, pair) {
+function drawRangeChart(seriesArg, pair) {
   const canvas = qs(SELECTORS.chartCanvas);
   if (!canvas || typeof canvas.getContext !== 'function') return;
 
-  chartLastSeries = Array.isArray(series) ? series.slice() : [];
+  // Normalize input to { id, name, color, data[] } series list.
+  let seriesList = [];
+  if (!seriesArg) {
+    seriesList = [];
+  } else if (
+    Array.isArray(seriesArg) &&
+    seriesArg[0] &&
+    Object.prototype.hasOwnProperty.call(seriesArg[0], 'data')
+  ) {
+    seriesList = seriesArg.map((s) => ({
+      id: s.id || s.name,
+      name: s.name || s.id,
+      color: s.color || null,
+      data: Array.isArray(s.data) ? s.data : [],
+    }));
+  } else if (
+    Array.isArray(seriesArg) &&
+    seriesArg[0] &&
+    Object.prototype.hasOwnProperty.call(seriesArg[0], 'value')
+  ) {
+    seriesList = [{
+      id: 'avg',
+      name: pair,
+      color: '#1a56db',
+      data: seriesArg.map((p) => ({ label: p.label, value: p.value })),
+    }];
+  }
+
+  chartLastSeries = seriesList.slice();
   chartLastPair = pair;
   ensureChartHoverEvents(canvas);
 
@@ -739,7 +767,7 @@ function drawRangeChart(series, pair) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-  if (!series.length) {
+  if (!seriesList.length || !seriesList[0].data || seriesList[0].data.length === 0) {
     chartPointPixels = [];
     ctx.fillStyle = '#6b7280';
     ctx.font = '14px Segoe UI';
@@ -753,11 +781,11 @@ function drawRangeChart(series, pair) {
     return;
   }
 
-  const padding = { top: 16, right: 20, bottom: 36, left: 56 };
+  const padding = { top: 16, right: 110, bottom: 36, left: 56 };
   const plotWidth = cssWidth - padding.left - padding.right;
   const plotHeight = cssHeight - padding.top - padding.bottom;
 
-  const values = series.map((s) => s.value).filter(Number.isFinite);
+  const values = seriesList.flatMap((s) => s.data.map((p) => p.value)).filter(Number.isFinite);
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
   const rawRange = rawMax - rawMin || 1;
@@ -765,9 +793,10 @@ function drawRangeChart(series, pair) {
   const max = rawMax + rawRange * 0.08;
   const range = max - min || 1;
 
+  const N = Math.max(1, seriesList[0].data.length);
   const xFor = (i) => {
-    if (series.length === 1) return padding.left + plotWidth / 2;
-    return padding.left + (i / (series.length - 1)) * plotWidth;
+    if (N === 1) return padding.left + plotWidth / 2;
+    return padding.left + (i / (N - 1)) * plotWidth;
   };
   const yFor = (v) => padding.top + ((max - v) / range) * plotHeight;
 
@@ -797,48 +826,81 @@ function drawRangeChart(series, pair) {
   ctx.lineTo(cssWidth - padding.right, padding.top + plotHeight);
   ctx.stroke();
 
-  // area fill under the line
-  const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotHeight);
-  gradient.addColorStop(0, 'rgba(26, 86, 219, 0.20)');
-  gradient.addColorStop(1, 'rgba(26, 86, 219, 0.02)');
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  series.forEach((point, i) => {
-    const x = xFor(i);
-    const y = yFor(point.value);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.lineTo(xFor(series.length - 1), padding.top + plotHeight);
-  ctx.lineTo(xFor(0), padding.top + plotHeight);
-  ctx.closePath();
-  ctx.fill();
+  const palette = ['#e11d48', '#059669', '#f59e0b', '#8b5cf6', '#06b6d4'];
+  const avgIndex = seriesList.findIndex((s) => s.id === 'avg');
 
-  ctx.strokeStyle = '#1a56db';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  series.forEach((point, i) => {
-    const x = xFor(i);
-    const y = yFor(point.value);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  ctx.fillStyle = '#1a56db';
-  chartPointPixels = [];
-  series.forEach((point, i) => {
-    const x = xFor(i);
-    const y = yFor(point.value);
-    chartPointPixels.push({ x, y });
+  // Draw average area if available.
+  if (avgIndex !== -1) {
+    const avgSeries = seriesList[avgIndex];
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotHeight);
+    gradient.addColorStop(0, 'rgba(26, 86, 219, 0.20)');
+    gradient.addColorStop(1, 'rgba(26, 86, 219, 0.02)');
+    ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(x, y, 3.2, 0, Math.PI * 2);
-    ctx.fill();
-  });
+    let firstX = null;
+    for (let i = 0; i < avgSeries.data.length; i += 1) {
+      const p = avgSeries.data[i];
+      if (!Number.isFinite(p.value)) continue;
+      const x = xFor(i);
+      const y = yFor(p.value);
+      if (firstX == null) {
+        ctx.moveTo(x, y);
+        firstX = x;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    if (firstX != null) {
+      ctx.lineTo(xFor(avgSeries.data.length - 1), padding.top + plotHeight);
+      ctx.lineTo(firstX, padding.top + plotHeight);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
 
-  if (chartHoverIndex != null && chartHoverIndex >= 0 && chartHoverIndex < series.length) {
+  // Draw lines and points for each series.
+  chartPointPixels = [];
+  for (let si = 0; si < seriesList.length; si += 1) {
+    const s = seriesList[si];
+    const color = s.color || (si === avgIndex ? '#1a56db' : palette[(si - (avgIndex !== -1 && si > avgIndex ? 1 : 0)) % palette.length]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = si === avgIndex ? 2 : 1.5;
+
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < s.data.length; i += 1) {
+      const p = s.data[i];
+      if (!Number.isFinite(p.value)) {
+        started = false;
+        continue;
+      }
+      const x = xFor(i);
+      const y = yFor(p.value);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    for (let i = 0; i < s.data.length; i += 1) {
+      const p = s.data[i];
+      if (!Number.isFinite(p.value)) continue;
+      const x = xFor(i);
+      const y = yFor(p.value);
+      chartPointPixels.push({ x, y, si, pi: i });
+      ctx.beginPath();
+      ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (chartHoverIndex != null && chartHoverIndex >= 0 && chartHoverIndex < chartPointPixels.length) {
     const hp = chartPointPixels[chartHoverIndex];
-    const sv = series[chartHoverIndex];
+    const sv = seriesList[hp.si].data[hp.pi] || {};
 
     // highlight hovered point
     ctx.strokeStyle = '#1a56db';
@@ -849,8 +911,8 @@ function drawRangeChart(series, pair) {
     ctx.fill();
     ctx.stroke();
 
-    const tooltipLine1 = sv?.label || '-';
-    const tooltipLine2 = `${pair}: ${formatNumber(sv?.value, 4)}`;
+    const tooltipLine1 = seriesList[hp.si].name || '-';
+    const tooltipLine2 = `${sv.label || '-'}: ${formatNumber(sv.value, 4)}`;
     ctx.font = '12px Segoe UI';
     const w = Math.max(ctx.measureText(tooltipLine1).width, ctx.measureText(tooltipLine2).width) + 16;
     const h = 38;
@@ -881,11 +943,11 @@ function drawRangeChart(series, pair) {
   // Draw evenly spaced day labels (dd.mm) on x-axis.
   const desiredTicks = Math.max(3, Math.min(7, Math.floor(plotWidth / 120)));
   const tickIndexes = [];
-  if (series.length === 1) {
+  if (N === 1) {
     tickIndexes.push(0);
   } else {
     for (let t = 0; t < desiredTicks; t += 1) {
-      const idx = Math.round((t * (series.length - 1)) / (desiredTicks - 1));
+      const idx = Math.round((t * (N - 1)) / (desiredTicks - 1));
       if (tickIndexes[tickIndexes.length - 1] !== idx) tickIndexes.push(idx);
     }
   }
@@ -895,7 +957,7 @@ function drawRangeChart(series, pair) {
   let lastDrawnLabel = '';
 
   for (const pointIndex of tickIndexes) {
-    const point = series[pointIndex];
+    const point = seriesList[0].data[pointIndex];
     const dayLabel = String(point?.label || '').split(' ')[0] || '';
     if (!dayLabel) continue;
 
@@ -920,6 +982,20 @@ function drawRangeChart(series, pair) {
     lastDrawnLabel = dayLabel;
   }
 
+  // Legend in the right-side gutter.
+  const legendX = cssWidth - padding.right + 8;
+  let legendY = padding.top;
+  ctx.font = '12px Segoe UI';
+  for (let si = 0; si < seriesList.length; si += 1) {
+    const s = seriesList[si];
+    const color = s.color || (si === avgIndex ? '#1a56db' : palette[(si - (avgIndex !== -1 && si > avgIndex ? 1 : 0)) % palette.length]);
+    ctx.fillStyle = color;
+    ctx.fillRect(legendX, legendY + 4, 12, 12);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(s.name, legendX + 18, legendY + 14);
+    legendY += 18;
+  }
+
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
   ctx.fillText(`${pair} aralık grafiği`, padding.left, 14);
@@ -941,31 +1017,81 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     showLoading(`${startDateValue} - ${endDateValue} günlük aralığı yükleniyor...`);
   }
   try {
-    const series = [];
     const baseSnapshot = await getLatestSnapshot();
     const providerMap = createProviderMapFromSnapshot(baseSnapshot);
     const entries = await getCurrentMonthlyEntries();
+
+    // Collect snapshots within requested range (apply incremental provider updates).
+    const snapshots = [];
     for (const entry of entries) {
       const results = Array.isArray(entry?.results) ? entry.results : [];
-      for (const result of results) {
-        applyCompactResultToMap(providerMap, result);
-      }
+      for (const result of results) applyCompactResultToMap(providerMap, result);
 
       const fullSnapshot = snapshotFromProviderMap(providerMap, entry);
-      const rows = filterVisibleRows(parseAllProviders(fullSnapshot));
       const ts = new Date(entry?.runStartedAt || entry?.scheduledFor || '');
       if (isNaN(ts) || ts < start || ts > end) continue;
 
-      const value = getPairParity(rows, pair);
-      if (Number.isFinite(value)) {
-        series.push({
-          label: formatChartPointLabel(ts.toISOString(), startDateValue),
-          value,
-        });
+      const rows = filterVisibleRows(parseAllProviders(fullSnapshot));
+      snapshots.push({ ts, rows, snapshot: fullSnapshot });
+    }
+
+    if (!snapshots.length) {
+      drawRangeChart([], pair);
+      renderChartMeta('');
+      return false;
+    }
+
+    const labels = snapshots.map((s) => formatChartPointLabel(s.ts.toISOString(), startDateValue));
+
+    const avgSeries = {
+      id: 'avg',
+      name: 'Ortalama',
+      color: '#1a56db',
+      data: snapshots.map((s, i) => {
+        const v = getPairParity(s.rows, pair);
+        return { label: labels[i], value: Number.isFinite(v) ? v : null };
+      }),
+    };
+
+    const providerIdSet = new Set();
+    for (const s of snapshots) {
+      const results = Array.isArray(s.snapshot?.results) ? s.snapshot.results : [];
+      for (const r of results) {
+        const id = r?.meta?.id;
+        if (id) providerIdSet.add(id);
+      }
+    }
+    const providerIds = Array.from(providerIdSet);
+    const palette = ['#e11d48', '#059669', '#f59e0b', '#8b5cf6', '#06b6d4'];
+
+    const providerSeries = providerIds.map((pid, idx) => {
+      let name = pid;
+      for (const s of snapshots) {
+        const found = (s.snapshot?.results || []).find((r) => r?.meta?.id === pid);
+        if (found) {
+          name = found.meta?.name || pid;
+          break;
+        }
+      }
+      return {
+        id: pid,
+        name,
+        color: palette[idx % palette.length],
+        data: [],
+      };
+    });
+
+    for (let i = 0; i < snapshots.length; i += 1) {
+      const s = snapshots[i];
+      for (const ps of providerSeries) {
+        const provRows = (s.rows || []).filter((r) => r.providerId === ps.id);
+        const v = getPairParity(provRows, pair);
+        ps.data.push({ label: labels[i], value: Number.isFinite(v) ? v : null });
       }
     }
 
-    drawRangeChart(series, pair);
+    const seriesList = [avgSeries, ...providerSeries];
+    drawRangeChart(seriesList, pair);
     renderChartMeta('');
     return true;
   } catch (error) {
