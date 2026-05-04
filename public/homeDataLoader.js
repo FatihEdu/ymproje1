@@ -490,7 +490,6 @@ function renderChartLegend(seriesList) {
     checkbox.type = 'checkbox';
     checkbox.className = 'chart-legend__checkbox';
     checkbox.checked = chartVisibleSeriesIds.has(series.id);
-    checkbox.dataset.seriesId = series.id;
     checkbox.setAttribute('aria-label', `${series.name} serisini göster`);
 
     checkbox.addEventListener('change', () => {
@@ -500,10 +499,8 @@ function renderChartLegend(seriesList) {
         chartVisibleSeriesIds.delete(series.id);
       }
       chartHoverIndex = null;
-      const rendered = drawRangeChart(chartLastSeries, chartLastPair);
-      if (rendered === 'ok') {
-        renderChartMeta('');
-      }
+      renderChartMeta('');
+      drawRangeChart(chartLastSeries, chartLastPair);
     });
 
     const text = document.createElement('span');
@@ -855,12 +852,6 @@ function drawRangeChart(seriesArg, pair) {
 
   if (!visibleSeriesList.length) {
     chartPointPixels = [];
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px Segoe UI';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
     renderChartMeta(CHART_EMPTY_SELECTION_MESSAGE, 'error');
     return 'no-selection';
   }
@@ -1022,7 +1013,7 @@ function drawRangeChart(seriesArg, pair) {
     ctx.fill();
     ctx.stroke();
 
-    const tooltipLine1 = seriesList[hp.si].name || '-';
+    const tooltipLine1 = visibleSeriesList[hp.si].name || '-';
     const tooltipLine2 = `${sv.label || '-'}: ${formatNumber(sv.value, 4)}`;
     ctx.font = '12px Segoe UI';
     const w = Math.max(ctx.measureText(tooltipLine1).width, ctx.measureText(tooltipLine2).width) + 16;
