@@ -58,6 +58,7 @@ const SELECTORS = {
   rangeButton: '#range-load-btn',
   chartPair: '#chart-pair',
   chartCanvas: '#range-chart',
+  chartLegend: '#chart-legend',
   chartMeta: '#chart-meta',
   loadingOverlay: '#loading-overlay',
   loadingMessage: '#loading-message'
@@ -74,9 +75,14 @@ let latestSnapshotCache = null;
 let currentMonthlyEntriesCache = null;
 let chartLastSeries = [];
 let chartLastPair = 'USD/TRY';
+let chartVisibleSeriesIds = new Set();
+let chartLegendSignature = '';
 let chartPointPixels = [];
 let chartHoverIndex = null;
 let loadingDepth = 0;
+
+const CHART_EMPTY_SELECTION_MESSAGE = 'Lütfen en az 1 adet banka ya da ortalama seçin.';
+const CHART_PALETTE = ['#e11d48', '#059669', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 function clearSortIndicators() {
   document.querySelectorAll('th[data-sort]').forEach((el) => {
@@ -457,9 +463,58 @@ function renderMeta(message) {
   if (el) el.textContent = message;
 }
 
-function renderChartMeta(message) {
+function renderChartMeta(message, tone = 'info') {
   const el = qs(SELECTORS.chartMeta);
-  if (el) el.textContent = message;
+  if (!el) return;
+
+  el.textContent = message;
+  el.classList.remove('chart-meta--info', 'chart-meta--error');
+  if (message) {
+    el.classList.add(tone === 'error' ? 'chart-meta--error' : 'chart-meta--info');
+  }
+}
+
+function renderChartLegend(seriesList) {
+  const container = qs(SELECTORS.chartLegend);
+  if (!container) return;
+
+  container.textContent = '';
+  if (!seriesList.length) return;
+
+  for (const series of seriesList) {
+    const label = document.createElement('label');
+    label.className = 'chart-legend__item';
+    label.style.setProperty('--legend-color', series.color || '#1a56db');
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'chart-legend__checkbox';
+    checkbox.checked = chartVisibleSeriesIds.has(series.id);
+    checkbox.setAttribute('aria-label', `${series.name} serisini göster`);
+
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        chartVisibleSeriesIds.add(series.id);
+      } else {
+        chartVisibleSeriesIds.delete(series.id);
+      }
+      chartHoverIndex = null;
+      renderChartMeta('');
+      drawRangeChart(chartLastSeries, chartLastPair);
+    });
+
+    const text = document.createElement('span');
+    text.className = 'chart-legend__text';
+    text.textContent = series.name || series.id || '-';
+
+    label.appendChild(checkbox);
+    label.appendChild(text);
+    container.appendChild(label);
+  }
+}
+
+function getVisibleChartSeries(seriesList) {
+  return seriesList.filter((series) => chartVisibleSeriesIds.has(series.id));
 }
 
 function createProviderMapFromSnapshot(snapshot) {
@@ -754,7 +809,21 @@ function drawRangeChart(seriesArg, pair) {
 
   chartLastSeries = seriesList.slice();
   chartLastPair = pair;
+
+  if (chartVisibleSeriesIds.size > 0 && !chartLastSeries.some((series) => chartVisibleSeriesIds.has(series.id))) {
+    chartVisibleSeriesIds = new Set(chartLastSeries.map((series) => series.id));
+  }
+
   ensureChartHoverEvents(canvas);
+  const nextLegendSignature = chartLastSeries
+    .map((series) => `${series.id}:${chartVisibleSeriesIds.has(series.id) ? '1' : '0'}`)
+    .join('|');
+  if (nextLegendSignature !== chartLegendSignature) {
+    renderChartLegend(chartLastSeries);
+    chartLegendSignature = nextLegendSignature;
+  }
+
+  const visibleSeriesList = getVisibleChartSeries(chartLastSeries);
 
   const dpr = globalThis.devicePixelRatio || 1;
   const cssWidth = canvas.clientWidth || 960;
@@ -767,7 +836,7 @@ function drawRangeChart(seriesArg, pair) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-  if (!seriesList.length || !seriesList[0].data || seriesList[0].data.length === 0) {
+  if (!chartLastSeries.length || !chartLastSeries[0].data || chartLastSeries[0].data.length === 0) {
     chartPointPixels = [];
     ctx.fillStyle = '#6b7280';
     ctx.font = '14px Segoe UI';
@@ -778,14 +847,20 @@ function drawRangeChart(seriesArg, pair) {
     // Default değerlere geri al
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    return;
+    return 'no-data';
   }
 
-  const padding = { top: 16, right: 110, bottom: 36, left: 56 };
+  if (!visibleSeriesList.length) {
+    chartPointPixels = [];
+    renderChartMeta(CHART_EMPTY_SELECTION_MESSAGE, 'error');
+    return 'no-selection';
+  }
+
+  const padding = { top: 16, right: 24, bottom: 36, left: 56 };
   const plotWidth = cssWidth - padding.left - padding.right;
   const plotHeight = cssHeight - padding.top - padding.bottom;
 
-  const values = seriesList.flatMap((s) => s.data.map((p) => p.value)).filter(Number.isFinite);
+  const values = visibleSeriesList.flatMap((s) => s.data.map((p) => p.value)).filter(Number.isFinite);
   if (values.length === 0) {
     chartPointPixels = [];
     ctx.fillStyle = '#6b7280';
@@ -795,7 +870,7 @@ function drawRangeChart(seriesArg, pair) {
     ctx.fillText('Seçilen aralıkta grafik verisi bulunamadı.', cssWidth / 2, cssHeight / 2);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    return;
+    return 'no-data';
   }
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
@@ -804,7 +879,7 @@ function drawRangeChart(seriesArg, pair) {
   const max = rawMax + rawRange * 0.08;
   const range = max - min || 1;
 
-  const N = Math.max(1, seriesList[0].data.length);
+  const N = Math.max(1, visibleSeriesList[0].data.length);
   const xFor = (i) => {
     if (N === 1) return padding.left + plotWidth / 2;
     return padding.left + (i / (N - 1)) * plotWidth;
@@ -837,12 +912,11 @@ function drawRangeChart(seriesArg, pair) {
   ctx.lineTo(cssWidth - padding.right, padding.top + plotHeight);
   ctx.stroke();
 
-  const palette = ['#e11d48', '#059669', '#f59e0b', '#8b5cf6', '#06b6d4'];
-  const avgIndex = seriesList.findIndex((s) => s.id === 'avg');
+  const avgIndex = visibleSeriesList.findIndex((s) => s.id === 'avg');
 
   // Draw average area if available.
   if (avgIndex !== -1) {
-    const avgSeries = seriesList[avgIndex];
+    const avgSeries = visibleSeriesList[avgIndex];
     const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotHeight);
     gradient.addColorStop(0, 'rgba(26, 86, 219, 0.20)');
     gradient.addColorStop(1, 'rgba(26, 86, 219, 0.02)');
@@ -888,9 +962,9 @@ function drawRangeChart(seriesArg, pair) {
 
   // Draw lines and points for each series.
   chartPointPixels = [];
-  for (let si = 0; si < seriesList.length; si += 1) {
-    const s = seriesList[si];
-    const color = s.color || (si === avgIndex ? '#1a56db' : palette[(si - (avgIndex !== -1 && si > avgIndex ? 1 : 0)) % palette.length]);
+  for (let si = 0; si < visibleSeriesList.length; si += 1) {
+    const s = visibleSeriesList[si];
+    const color = s.color || (si === avgIndex ? '#1a56db' : CHART_PALETTE[si % CHART_PALETTE.length]);
     ctx.strokeStyle = color;
     ctx.lineWidth = si === avgIndex ? 2 : 1.5;
 
@@ -928,7 +1002,7 @@ function drawRangeChart(seriesArg, pair) {
 
   if (chartHoverIndex != null && chartHoverIndex >= 0 && chartHoverIndex < chartPointPixels.length) {
     const hp = chartPointPixels[chartHoverIndex];
-    const sv = seriesList[hp.si].data[hp.pi] || {};
+    const sv = visibleSeriesList[hp.si].data[hp.pi] || {};
 
     // highlight hovered point
     ctx.strokeStyle = '#1a56db';
@@ -939,7 +1013,7 @@ function drawRangeChart(seriesArg, pair) {
     ctx.fill();
     ctx.stroke();
 
-    const tooltipLine1 = seriesList[hp.si].name || '-';
+    const tooltipLine1 = visibleSeriesList[hp.si].name || '-';
     const tooltipLine2 = `${sv.label || '-'}: ${formatNumber(sv.value, 4)}`;
     ctx.font = '12px Segoe UI';
     const w = Math.max(ctx.measureText(tooltipLine1).width, ctx.measureText(tooltipLine2).width) + 16;
@@ -985,7 +1059,7 @@ function drawRangeChart(seriesArg, pair) {
   let lastDrawnLabel = '';
 
   for (const pointIndex of tickIndexes) {
-    const point = seriesList[0].data[pointIndex];
+    const point = visibleSeriesList[0].data[pointIndex];
     const dayLabel = String(point?.label || '').split(' ')[0] || '';
     if (!dayLabel) continue;
 
@@ -1010,23 +1084,11 @@ function drawRangeChart(seriesArg, pair) {
     lastDrawnLabel = dayLabel;
   }
 
-  // Legend in the right-side gutter.
-  const legendX = cssWidth - padding.right + 8;
-  let legendY = padding.top;
-  ctx.font = '12px Segoe UI';
-  for (let si = 0; si < seriesList.length; si += 1) {
-    const s = seriesList[si];
-    const color = s.color || (si === avgIndex ? '#1a56db' : palette[(si - (avgIndex !== -1 && si > avgIndex ? 1 : 0)) % palette.length]);
-    ctx.fillStyle = color;
-    ctx.fillRect(legendX, legendY + 4, 12, 12);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillText(s.name, legendX + 18, legendY + 14);
-    legendY += 18;
-  }
-
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
   ctx.fillText(`${pair} aralık grafiği`, padding.left, 14);
+
+  return 'ok';
 }
 
 async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) {
@@ -1128,9 +1190,12 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     }
 
     const seriesList = [avgSeries, ...providerSeries];
-    drawRangeChart(seriesList, pair);
-    renderChartMeta('');
-    return true;
+    chartVisibleSeriesIds = new Set(seriesList.map((series) => series.id));
+    const chartStatus = drawRangeChart(seriesList, pair);
+    if (chartStatus === 'ok' || chartStatus === 'no-data') {
+      renderChartMeta('');
+    }
+    return chartStatus === 'ok' || chartStatus === 'no-data';
   } catch (error) {
     console.error(error);
     if (!silentFailure) {
