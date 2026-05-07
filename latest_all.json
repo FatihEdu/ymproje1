@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-05-07T14:07:00+03:00",
-  "runStartedAt": "2026-05-07T15:00:51+03:00",
+  "scheduledFor": "2026-05-07T17:07:00+03:00",
+  "runStartedAt": "2026-05-07T17:44:28+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,205 +12,205 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-05-07T12:00:52.728Z",
-      "providerUpdatedAt": "2026-05-07T14:58:16+03:00",
-      "providerFingerprint": "5f6b24dcd1c59d869c0494542f01b34b9c30751c7919a3bd3fa4f0381c2f149c",
+      "scrapedAt": "2026-05-07T14:44:31.130Z",
+      "providerUpdatedAt": "2026-05-07T17:44:03+03:00",
+      "providerFingerprint": "358873697f6ba39ed22f4b37e476d924ef1e76d45e809a80b1d5fbf7c691f1ca",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
       "data": {
         "USD/TL": {
-          "buy": 44.401,
-          "sell": 45.751,
+          "buy": 44.403,
+          "sell": 45.753,
           "description": "Amerikan Doları",
-          "changeRatio": 0.01,
+          "changeRatio": 0.02,
           "flagCode": "us/tr"
         },
         "TL/USD": {
-          "buy": 0.021857445738890955,
-          "sell": 0.02252201526992635,
+          "buy": 0.02185649028479007,
+          "sell": 0.02252100083327703,
           "description": "Türk Lirası",
-          "changeRatio": 0.01,
+          "changeRatio": 0,
           "flagCode": "tr/us"
         },
         "XPD/TL": {
-          "buy": 2209.547,
-          "sell": 2314.577,
+          "buy": 2182.307,
+          "sell": 2286.025,
           "description": "Paladyum",
-          "changeRatio": 0.24,
+          "changeRatio": -1,
           "flagCode": "xpd/tr"
         },
         "TL/XPD": {
-          "buy": 0.00043204438651209265,
-          "sell": 0.0004525814567420381,
+          "buy": 0.00043744053542721535,
+          "sell": 0.00045823067057018104,
           "description": "Türk Lirası",
-          "changeRatio": -0.18,
+          "changeRatio": 1.06,
           "flagCode": "tr/xpd"
         },
         "XPT/TL": {
-          "buy": 2978.138,
-          "sell": 3119.703,
+          "buy": 2965.408,
+          "sell": 3106.344,
           "description": "Platin",
-          "changeRatio": 0.63,
+          "changeRatio": 0.2,
           "flagCode": "xpt/tr"
         },
         "TL/XPT": {
-          "buy": 0.0003205433337724777,
-          "sell": 0.00033578027613226786,
+          "buy": 0.0003219218476768832,
+          "sell": 0.000337221724632833,
           "description": "Türk Lirası",
-          "changeRatio": -0.57,
+          "changeRatio": -0.14,
           "flagCode": "tr/xpt"
         },
         "EUR/TL": {
-          "buy": 52.249,
-          "sell": 53.838,
+          "buy": 52.262,
+          "sell": 53.851,
           "description": "Avrupa Para Birimi",
-          "changeRatio": 0.2,
+          "changeRatio": 0.23,
           "flagCode": "eu/tr"
         },
         "TL/EUR": {
-          "buy": 0.018574241242245253,
-          "sell": 0.019139122279852244,
+          "buy": 0.018569757293272177,
+          "sell": 0.0191343614863572,
           "description": "Türk Lirası",
-          "changeRatio": -0.18,
+          "changeRatio": -0.2,
           "flagCode": "tr/eu"
         },
         "GMS/TL": {
-          "buy": 114.553,
-          "sell": 119.211,
+          "buy": 116.056,
+          "sell": 120.773,
           "description": "Gümüş (Gram)",
-          "changeRatio": 3.34,
+          "changeRatio": 4.69,
           "flagCode": "gms/tr"
         },
         "TL/GMS": {
-          "buy": 0.008388487639563463,
-          "sell": 0.008729583686154008,
+          "buy": 0.008279996356801603,
+          "sell": 0.00861652995105811,
           "description": "Türk Lirası",
-          "changeRatio": -3.19,
+          "changeRatio": -4.45,
           "flagCode": "tr/gms"
         },
         "ALT/TL": {
-          "buy": 6757.246,
-          "sell": 7009.814,
+          "buy": 6782.175,
+          "sell": 7035.622,
           "description": "Altın (Gram)",
-          "changeRatio": -0.91,
+          "changeRatio": -0.55,
           "flagCode": "au/tr"
         },
         "TL/ALT": {
-          "buy": 0.00014265713755029732,
-          "sell": 0.00014798928439189576,
+          "buy": 0.0001421338440297105,
+          "sell": 0.00014744532543026388,
           "description": "Türk Lirası",
-          "changeRatio": 0.96,
+          "changeRatio": 0.58,
           "flagCode": "tr/au"
         },
         "GBP/TL": {
-          "buy": 60.455,
-          "sell": 62.293,
+          "buy": 60.472,
+          "sell": 62.311,
           "description": "İngiliz Sterlini",
-          "changeRatio": 0.19,
+          "changeRatio": 0.22,
           "flagCode": "uk/tr"
         },
         "TL/GBP": {
-          "buy": 0.0160531680927231,
-          "sell": 0.01654122901331569,
+          "buy": 0.016048530757009197,
+          "sell": 0.01653657891255457,
           "description": "Türk Lirası",
-          "changeRatio": -0.17,
+          "changeRatio": -0.19,
           "flagCode": "tr/uk"
         },
         "CHF/TL": {
-          "buy": 57.064,
-          "sell": 58.799,
+          "buy": 57.114,
+          "sell": 58.85,
           "description": "İsviçre Frangı",
-          "changeRatio": 0.12,
+          "changeRatio": 0.21,
           "flagCode": "ch/tr"
         },
         "TL/CHF": {
-          "buy": 0.017007091957346215,
-          "sell": 0.017524183373054815,
+          "buy": 0.016992353440951572,
+          "sell": 0.017508841965192423,
           "description": "Türk Lirası",
-          "changeRatio": -0.1,
+          "changeRatio": -0.19,
           "flagCode": "tr/ch"
         },
         "AUD/TL": {
-          "buy": 32.222,
-          "sell": 33.202,
+          "buy": 32.205,
+          "sell": 33.185,
           "description": "Avustralya Doları",
-          "changeRatio": 0.3,
+          "changeRatio": 0.25,
           "flagCode": "aus/tr"
         },
         "TL/AUD": {
-          "buy": 0.030118667550147582,
-          "sell": 0.03103469679101235,
+          "buy": 0.0301340967304505,
+          "sell": 0.03105107902499612,
           "description": "Türk Lirası",
-          "changeRatio": -0.28,
+          "changeRatio": -0.22,
           "flagCode": "tr/aus"
         },
         "CAD/TL": {
-          "buy": 32.573,
-          "sell": 33.563,
+          "buy": 32.574,
+          "sell": 33.564,
           "description": "Kanada Doları",
           "changeRatio": 0.02,
           "flagCode": "ca/tr"
         },
         "TL/CAD": {
-          "buy": 0.029794714417662304,
-          "sell": 0.03070027323243177,
+          "buy": 0.029793826719103803,
+          "sell": 0.03069933075458955,
           "description": "Türk Lirası",
           "changeRatio": 0,
           "flagCode": "tr/ca"
         },
         "CNY/TL": {
-          "buy": 6.3894,
-          "sell": 6.8807,
+          "buy": 6.3903,
+          "sell": 6.8817,
           "description": "Çin Yuanı",
-          "changeRatio": 0.21,
+          "changeRatio": 0.23,
           "flagCode": "cn/tr"
         },
         "TL/CNY": {
-          "buy": 0.14533405031464822,
-          "sell": 0.15650921839296333,
+          "buy": 0.14531293139776508,
+          "sell": 0.15648717587593697,
           "description": "Türk Lirası",
-          "changeRatio": -0.07,
+          "changeRatio": -0.09,
           "flagCode": "tr/cn"
         },
         "DKK/TL": {
-          "buy": 6.9921,
-          "sell": 7.2047,
+          "buy": 6.9939,
+          "sell": 7.2066,
           "description": "Danimarka Kronu",
-          "changeRatio": 0.2,
+          "changeRatio": 0.22,
           "flagCode": "dk/tr"
         },
         "TL/DKK": {
-          "buy": 0.13879828445320416,
-          "sell": 0.14301854950587092,
+          "buy": 0.13876169067243915,
+          "sell": 0.14298174123164473,
           "description": "Türk Lirası",
-          "changeRatio": -0.17,
+          "changeRatio": -0.2,
           "flagCode": "tr/dk"
         },
         "JPY/TL": {
-          "buy": 28.387,
-          "sell": 29.25,
+          "buy": 28.393,
+          "sell": 29.257,
           "description": "Japon Yeni (100)",
-          "changeRatio": -0.01,
+          "changeRatio": 0.02,
           "flagCode": "jp/tr"
         },
         "TL/JPY": {
-          "buy": 0.03418803418803419,
-          "sell": 0.035227392820657344,
+          "buy": 0.03417985439382028,
+          "sell": 0.035219948578875074,
           "description": "Türk Lirası",
-          "changeRatio": 0.03,
+          "changeRatio": 0.01,
           "flagCode": "tr/jp"
         },
         "NOK/TL": {
-          "buy": 4.8103,
-          "sell": 4.9566,
+          "buy": 4.7846,
+          "sell": 4.9301,
           "description": "Norveç Kronu",
-          "changeRatio": 0.8,
+          "changeRatio": 0.26,
           "flagCode": "no/tr"
         },
         "TL/NOK": {
-          "buy": 0.2017512004196425,
-          "sell": 0.20788724195996092,
+          "buy": 0.20283564227906126,
+          "sell": 0.20900388747230697,
           "description": "Türk Lirası",
-          "changeRatio": -0.77,
+          "changeRatio": -0.24,
           "flagCode": "tr/no"
         },
         "SAR/TL": {
@@ -228,17 +228,17 @@
           "flagCode": "tr/sa"
         },
         "SEK/TL": {
-          "buy": 4.8273,
-          "sell": 4.974,
+          "buy": 4.8233,
+          "sell": 4.9699,
           "description": "İsveç Kronu",
-          "changeRatio": 0.51,
+          "changeRatio": 0.43,
           "flagCode": "se/tr"
         },
         "TL/SEK": {
-          "buy": 0.2010454362685967,
-          "sell": 0.20715513848321007,
+          "buy": 0.2012112919777058,
+          "sell": 0.20732693384197542,
           "description": "Türk Lirası",
-          "changeRatio": -0.49,
+          "changeRatio": -0.41,
           "flagCode": "tr/se"
         },
         "XPT/USD": {
@@ -476,65 +476,65 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-05-07T12:00:53.254Z",
+      "scrapedAt": "2026-05-07T14:44:32.087Z",
       "providerUpdatedAt": null,
-      "providerFingerprint": "74bf2ac02f78ef1f66519dd98968f63e47bdaa4f10bfb4117df6ac8723a0c582",
+      "providerFingerprint": "c76992ab9d6569876b1822d88e53c0868aa92485c9194429cc5478b467928881",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
       "data": {
         "USD": {
-          "buy": 44.70918,
-          "sell": 45.6911,
+          "buy": 44.66094,
+          "sell": 45.74388,
           "description": "Amerikan Doları",
           "title": "USD",
-          "changeRate": 0.058382408718906875,
+          "changeRate": 0.1739646867453099,
           "changeRateNegative": false
         },
         "EUR": {
-          "buy": 52.62628,
-          "sell": 53.78436,
+          "buy": 52.56146,
+          "sell": 53.84054,
           "description": "Euro",
           "title": "EUR",
-          "changeRate": 0.22269697949402634,
+          "changeRate": 0.32738375305251016,
           "changeRateNegative": false
         },
         "ALT (gr)": {
-          "buy": 6745.03723,
-          "sell": 6924.01128,
+          "buy": 6743.86976,
+          "sell": 6944.20196,
           "description": "Altın",
           "title": "ALT (gr)",
-          "changeRate": 0.7417490575889533,
+          "changeRate": 1.0355158259559278,
           "changeRateNegative": false
         },
         "GMS (gr)": {
-          "buy": 115.70395,
-          "sell": 118.76856,
+          "buy": 116.64225,
+          "sell": 120.12531,
           "description": "Gümüş",
           "title": "GMS (gr)",
-          "changeRate": 4.704365926139726,
+          "changeRate": 5.900453918368394,
           "changeRateNegative": false
         },
         "PLT (gr)": {
-          "buy": 2990.02587,
-          "sell": 3077.41064,
+          "buy": 2962.32813,
+          "sell": 3066.4287,
           "description": "Platin",
           "title": "PLT (gr)",
-          "changeRate": 3.1447361892787784,
+          "changeRate": 2.776657490445629,
           "changeRateNegative": false
         },
         "ZCeyrek": {
-          "buy": 10917.66839,
-          "sell": 11316.84285,
+          "buy": 10920.17364,
+          "sell": 11365.11194,
           "description": "Çeyrek Altın (22 ayar)",
           "title": "Çeyrek",
-          "changeRate": 0.9364239417501142,
+          "changeRate": 1.3669423642554237,
           "changeRateNegative": false
         },
         "EUR/USD": {
-          "buy": 1.17355,
-          "sell": 1.18066,
+          "buy": 1.17302,
+          "sell": 1.18088,
           "description": "EUR/USD",
           "title": "EUR/USD",
-          "changeRate": 0.1690039861041167,
+          "changeRate": 0.12376554537927738,
           "changeRateNegative": false
         }
       },
@@ -548,32 +548,32 @@
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
       "ok": true,
-      "scrapedAt": "2026-05-07T12:00:54.190Z",
-      "providerUpdatedAt": "2026-05-07T14:58:28+03:00",
-      "providerFingerprint": "855b21239c69530954ed9be4e2e091e10968711de4ea37605c20ca878920a229",
+      "scrapedAt": "2026-05-07T14:44:34.205Z",
+      "providerUpdatedAt": "2026-05-07T17:43:23+03:00",
+      "providerFingerprint": "b6115da3f23539939b12136f770cac8c70f9038db1e3c642cf5979f76c8d9a56",
       "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
       "data": {
         "EUR": {
-          "buy": 52.5593033,
-          "sell": 53.63111,
+          "buy": 52.5704079,
+          "sell": 53.64265,
           "dailyStatus": "up",
-          "change": 0.142348275,
+          "change": 0.163703024,
           "previousDayBuyingPrice": 52.50263,
           "previousDaySellingPrice": 53.5368423
         },
         "USD": {
-          "buy": 44.6490746,
-          "sell": 45.61109,
+          "buy": 44.6512527,
+          "sell": 45.61359,
           "dailyStatus": "up",
-          "change": 0.05479331,
+          "change": 0.0599761568,
           "previousDayBuyingPrice": 44.64432,
           "previousDaySellingPrice": 45.5664177
         },
         "XAU": {
-          "buy": 6778.193,
-          "sell": 6959.55127,
+          "buy": 6795.33447,
+          "sell": 6976.68262,
           "dailyStatus": "up",
-          "change": 0.8517589,
+          "change": 1.10336208,
           "previousDayBuyingPrice": 6720.417,
           "previousDaySellingPrice": 6901.30273
         }
