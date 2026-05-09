@@ -2,8 +2,11 @@ require('dotenv').config();
 const path = require('node:path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const userRoutes = require('./routes/userRoutes');
-const userController = require('./controllers/userController');
+const pageRoutes = require('./routes/pageRoutes');
+const authRoutes = require('./routes/authRoutes');
+const favoritesRoutes = require('./routes/favoritesRoutes');
+const csrfRoutes = require('./routes/csrfRoutes');
+const pageController = require('./controllers/pageController');
 const bodyMiddleware = require('./middlewares/body');
 const sessionMiddleware = require('./middlewares/session');
 
@@ -25,11 +28,14 @@ app.use(sessionMiddleware());
 // CSRF protection (requires cookie-parser + session + body parser)
 app.use(require('./middlewares/csrf')());
 
-// Mount the user router
-app.use('/', userRoutes);
+// Mount the routers
+app.use('/', pageRoutes);
+app.use('/', authRoutes);
+app.use('/', favoritesRoutes);
+app.use('/', csrfRoutes);
 
 // 404 handler
-app.use(userController.get404Page);
+app.use(pageController.get404Page);
 
 // CSRF error handler – must be defined after routes
 // csrf-csrf uses err.code === 'EBADCSRFTOKEN' (same default as csurf)
