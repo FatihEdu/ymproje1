@@ -361,5 +361,10 @@ if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     wireControls();
     loadFavoritesPage();
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        void loadFavoritesPage();
+      }
+    });
   });
 }
