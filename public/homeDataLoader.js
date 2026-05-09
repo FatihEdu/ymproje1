@@ -229,6 +229,19 @@ async function loadFavorites() {
   }
 }
 
+async function refreshFavoritesOnResume() {
+  try {
+    await initAuthState();
+    await loadFavorites();
+    if (Array.isArray(latestLoadedRows) && latestLoadedRows.length > 0) {
+      renderCurrencyList(latestLoadedRows);
+      updateSortIndicator();
+    }
+  } catch (error) {
+    console.warn('[homeDataLoader] favorites could not be refreshed on resume', error?.message || error);
+  }
+}
+
 async function updateFavorite(pair, providerName, shouldAdd) {
   const token = await ensureCsrfToken();
   const body = new URLSearchParams({ pair, providerName }).toString();
@@ -1417,5 +1430,10 @@ async function init() {
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     void init();
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        void refreshFavoritesOnResume();
+      }
+    });
   });
 }
