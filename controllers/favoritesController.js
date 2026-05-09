@@ -1,13 +1,13 @@
 const User = require('../models/userModel');
 
 exports.getFavorites = (req, res) => {
-	const username = req?.session?.user?.username;
+	const username = req.session.user.username;
 	const favorites = User.getFavorites(username);
 	return res.json({ favorites });
 };
 
 exports.addFavorite = (req, res) => {
-	const username = req?.session?.user?.username;
+	const username = req.session.user.username;
 	const pair = (req.body?.pair || '').trim();
 	const providerName = (req.body?.providerName || '').trim();
 
@@ -22,7 +22,7 @@ exports.addFavorite = (req, res) => {
 };
 
 exports.removeFavorite = (req, res) => {
-	const username = req?.session?.user?.username;
+	const username = req.session.user.username;
 	const pair = (req.body?.pair || '').trim();
 	const providerName = (req.body?.providerName || '').trim();
 
