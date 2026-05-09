@@ -1,7 +1,7 @@
 function formatRelativeTime(dateString) {
   if (!dateString) return '-';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   const now = new Date();
   const diffMs = now - d;
   const diffSec = Math.floor(diffMs / 1000);
@@ -19,7 +19,7 @@ function formatRelativeTime(dateString) {
 function formatShortDateTime(dateString) {
   if (!dateString) return '-';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   const pad = (n) => n.toString().padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -27,7 +27,7 @@ function formatShortDateTime(dateString) {
 function getFreshnessClass(dateString) {
   if (!dateString) return 'freshness--unknown';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return 'freshness--unknown';
+  if (Number.isNaN(d.getTime())) return 'freshness--unknown';
   const now = new Date();
   const diffMs = now - d;
   const diffMin = Math.floor(diffMs / 1000 / 60);
@@ -583,7 +583,7 @@ function snapshotFromProviderMap(providerMap, template) {
 function formatChartPointLabel(dateString, fallbackMonthKey) {
   if (!dateString) return fallbackMonthKey;
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return fallbackMonthKey;
+  if (Number.isNaN(d.getTime())) return fallbackMonthKey;
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -630,7 +630,7 @@ function toDateOnlyString(dateValue) {
     if (isoDateMatch) return isoDateMatch[1];
   }
   const d = new Date(dateValue);
-  if (Number.isNaN(d)) return null;
+  if (Number.isNaN(d.getTime())) return null;
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
@@ -658,7 +658,7 @@ function addDays(dateOnly, days) {
   const day = Number(parts[2]);
   if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
   const d = new Date(Date.UTC(year, month - 1, day));
-  if (Number.isNaN(d)) return null;
+  if (Number.isNaN(d.getTime())) return null;
   d.setUTCDate(d.getUTCDate() + days);
   return toDateOnlyString(d.toISOString());
 }
@@ -1108,7 +1108,7 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
   const { silentFailure = false, manageLoading = true } = options;
   const start = new Date(`${startDateValue}T00:00:00`);
   const end = new Date(`${endDateValue}T23:59:59`);
-  if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
     if (!silentFailure) {
       renderChartMeta('Aralık geçersiz. Başlangıç tarihi, bitiş tarihinden büyük olamaz.');
     }
@@ -1132,7 +1132,7 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
 
       const fullSnapshot = snapshotFromProviderMap(providerMap, entry);
       const ts = new Date(entry?.runStartedAt || entry?.scheduledFor || '');
-      if (Number.isNaN(ts) || ts < start || ts > end) continue;
+      if (Number.isNaN(ts.getTime()) || ts < start || ts > end) continue;
 
       const rows = filterVisibleRows(parseAllProviders(fullSnapshot));
       snapshots.push({ ts, rows, snapshot: fullSnapshot });

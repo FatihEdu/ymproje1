@@ -32,7 +32,7 @@ function formatPct(value) {
 function formatShortDateTime(dateString) {
   if (!dateString) return '-';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   const pad = (n) => n.toString().padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -40,7 +40,7 @@ function formatShortDateTime(dateString) {
 function formatRelativeTime(dateString) {
   if (!dateString) return '-';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   const now = new Date();
   const diffMin = Math.floor((now - d) / 1000 / 60);
   if (diffMin < 1) return 'şimdi';
@@ -55,7 +55,7 @@ function formatRelativeTime(dateString) {
 function getFreshnessClass(dateString) {
   if (!dateString) return 'freshness--unknown';
   const d = new Date(dateString);
-  if (Number.isNaN(d)) return 'freshness--unknown';
+  if (Number.isNaN(d.getTime())) return 'freshness--unknown';
   const diffMin = Math.floor((Date.now() - d) / 1000 / 60);
   if (diffMin < 60 * 24) return 'freshness--fresh';
   if (diffMin < 60 * 24 * 7) return 'freshness--warn';
