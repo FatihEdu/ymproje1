@@ -78,7 +78,7 @@ describe('User Model', () => {
             ),
             'utf8'
         );
-    });    
+    });
     test('removeFavorite should remove a favorite from the user', () => {
         const userData = {
             username: 'testuser',
