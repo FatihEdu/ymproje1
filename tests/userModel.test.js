@@ -78,5 +78,49 @@ describe('User Model', () => {
             ),
             'utf8'
         );
+    });    
+    test('removeFavorite should remove a favorite from the user', () => {
+        const userData = {
+            username: 'testuser',
+            favorites: [
+                {
+                    pair: 'BTC/USD',
+                    providerName: 'Binance'
+                },
+                {
+                    pair: 'ETH/USD',
+                    providerName: 'Coinbase'
+                }
+            ]
+        };
+
+        const favorite = {
+            pair: 'BTC/USD',
+            providerName: 'Binance'
+        };
+
+        fs.readFileSync.mockReturnValue(JSON.stringify([userData]));
+
+        User.removeFavorite('testuser', favorite);
+
+        expect(fs.writeFileSync).toHaveBeenLastCalledWith(
+            dataPath,
+            JSON.stringify(
+                [
+                    {
+                        username: 'testuser',
+                        favorites: [
+                            {
+                                pair: 'ETH/USD',
+                                providerName: 'Coinbase'
+                            }
+                        ]
+                    }
+                ],
+                null,
+                2
+            ),
+            'utf8'
+        );
     });
 });
