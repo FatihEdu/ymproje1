@@ -1,10 +1,11 @@
-const User = require('../models/userModel');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const dataPath = path.join(__dirname, '../data/users.json');
-
 jest.mock('node:fs');
+
+const User = require('../models/userModel');
+
+const dataPath = path.join(__dirname, '../data/users.json');
 
 describe('User Model', () => {
   beforeEach(() => {
@@ -13,10 +14,11 @@ describe('User Model', () => {
     fs.writeFileSync.mockClear();
   });
 
-    test('getAll should return an empty array when users.json is empty', () => {
-        const users = User.getAll();
-        expect(users).toEqual([]);
-    });
+  test('getAll should return an empty array when users.json is empty', () => {
+    fs.readFileSync.mockReturnValue('   ');
+    const users = User.getAll();
+    expect(users).toEqual([]);
+  });
 
     test('save should add a user to users.json', () => {
         const userData = { username: 'testuser', favorites: [] };
