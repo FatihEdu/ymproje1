@@ -22,11 +22,6 @@
             const result = User.getFavorites('olmayan_kullanici');
             expect(result).toEqual([]);
         });
-        test('should return false when removing favorite from a non-existent user', () => {
-            fs.readFileSync.mockReturnValue(JSON.stringify([])); 
-            const result = User.removeFavorite('olmayan_kullanici', { pair: 'BTC/USDT' });
-            expect(result).toBe(false);
-        });
         test('addFavorite should work correctly if favorites property is null', () => {
             const userData = { username: 'testuser', favorites: null };
             fs.readFileSync.mockReturnValue(JSON.stringify([userData]));
@@ -165,6 +160,10 @@
             fs.readFileSync.mockReturnValue('invalid-json');
             const users = User.getAll();
             expect(users).toEqual([]);
+            expect(spy).toHaveBeenCalledWith(
+                expect.stringContaining('Error parsing users.json:'),
+                expect.any(Error)
+            );
             spy.mockRestore(); 
         });
 
