@@ -43,6 +43,7 @@
             fs.readFileSync.mockReturnValue(JSON.stringify([])); 
             const result = User.removeFavorite('bu_kullanici_yok', { pair: 'BTC/USDT' });
             expect(result).toBe(false);
+            expect(fs.writeFileSync).not.toHaveBeenCalled();
         });
         test('getAll should return an empty array when users.json is empty', () => {
              fs.readFileSync.mockReturnValue('   ');
