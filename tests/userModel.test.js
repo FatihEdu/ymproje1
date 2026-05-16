@@ -24,15 +24,20 @@
         });
         test('addFavorite should work correctly if favorites property is null', () => {
             const userData = { username: 'testuser', favorites: null };
+            const favoriteToAdd = { pair: 'BTC/USDT', providerName: 'Binance' };
             fs.readFileSync.mockReturnValue(JSON.stringify([userData]));
         
-            const result = User.addFavorite('testuser', { pair: 'BTC/USDT', providerName: 'Binance' });
+            const result = User.addFavorite('testuser', favoriteToAdd);
             expect(result).toBe(true);
-         expect(fs.writeFileSync).toHaveBeenCalledWith(
-            dataPath,
-            expect.stringContaining('"favorites": ['),
-            'utf8'
-        );
+            expect(fs.writeFileSync).toHaveBeenCalledWith(
+                dataPath,
+                JSON.stringify(
+                    [{ username: 'testuser', favorites: [favoriteToAdd] }],
+                    null,
+                    2
+                ),
+                'utf8'
+            );
         });
         test('removeFavorite should return false if user is not found', () => {
             fs.readFileSync.mockReturnValue(JSON.stringify([])); 
