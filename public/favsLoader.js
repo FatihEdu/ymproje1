@@ -62,6 +62,16 @@ function getFreshnessClass(dateString) {
   return 'freshness--stale';
 }
 
+function normalizeProviderName(name) {
+  if (!name) return '';
+  return String(name)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 function renderMeta(message) {
   const el = qs('#favs-meta');
   if (el) el.textContent = message;
@@ -71,6 +81,121 @@ async function fetchJson(url) {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return res.json();
+}
+
+async function fetchText(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.text();
+}
+
+async function fetchGzipText(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+
+  const buffer = await res.arrayBuffer();
+  if (!('DecompressionStream' in globalThis)) {
+    throw new Error('Tarayıcı gzip açmayı desteklemiyor.');
+  }
+
+  const ds = new DecompressionStream('gzip');
+  const decompressed = new Response(new Blob([buffer]).stream().pipeThrough(ds));
+  return decompressed.text();
+}
+
+function parseJsonl(text) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+let currentMonthlyEntriesCache = null;
+
+async function getCurrentMonthlyEntries() {
+  if (Array.isArray(currentMonthlyEntriesCache)) {
+    return currentMonthlyEntriesCache;
+  }
+
+  let currentMonthlyPath = null;
+  try {
+    const indexJson = await fetchJson(`${DATA_BASE_URL}/index.json`);
+    if (indexJson?.currentMonthly) {
+      currentMonthlyPath = `${DATA_BASE_URL}/${indexJson.currentMonthly}`;
+    }
+  } catch {
+    currentMonthlyPath = null;
+  }
+
+  if (!currentMonthlyPath) {
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    currentMonthlyPath = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
+  }
+
+  let text = '';
+  try {
+    text = await fetchText(currentMonthlyPath);
+  } catch {
+    const monthKey = currentMonthlyPath.split('/').pop().replace('.jsonl', '');
+    const [year, month] = monthKey.split('-');
+    const closedPath = `${DATA_BASE_URL}/monthlies/${year}/${month}.jsonl.gz`;
+    text = await fetchGzipText(closedPath);
+  }
+
+  currentMonthlyEntriesCache = parseJsonl(text);
+  return currentMonthlyEntriesCache;
+}
+
+function createProviderMapFromSnapshot(snapshot) {
+  const map = new Map();
+  const results = Array.isArray(snapshot?.results) ? snapshot.results : [];
+  for (const result of results) {
+    const id = result?.meta?.id;
+    if (!id) continue;
+    map.set(id, result);
+  }
+  return map;
+}
+
+function applyCompactResultToMap(providerMap, result) {
+  const id = result?.meta?.id;
+  if (!id) return;
+
+  const prev = providerMap.get(id);
+
+  if (result?.data && typeof result.data === 'object') {
+    providerMap.set(id, {
+      ...prev,
+      ...result,
+      meta: result.meta || prev?.meta,
+      data: result.data,
+    });
+    return;
+  }
+
+  if (prev) {
+    providerMap.set(id, {
+      ...prev,
+      ...result,
+      meta: result.meta || prev.meta,
+      data: prev.data,
+    });
+    return;
+  }
+
+  providerMap.set(id, result);
+}
+
+function snapshotFromProviderMap(providerMap, template) {
+  return {
+    rev: template?.rev ?? 1,
+    scheduledFor: template?.scheduledFor ?? null,
+    runStartedAt: template?.runStartedAt ?? null,
+    timezone: template?.timezone ?? null,
+    results: Array.from(providerMap.values()),
+  };
 }
 
 let csrfTokenCache = '';
@@ -93,11 +218,12 @@ async function getCsrfToken() {
 }
 
 function favoriteKey(pair, providerName) {
-  return `${pair}::${providerName}`;
+  return `${pair}::${normalizeProviderName(providerName)}`;
 }
 
 function findRowByFavorite(rows, favorite) {
-  return rows.find((row) => row.pair === favorite.pair && row.providerName === favorite.providerName);
+  const favName = normalizeProviderName(favorite.providerName);
+  return rows.find((row) => row.pair === favorite.pair && normalizeProviderName(row.providerName) === favName);
 }
 
 async function removeFavorite(pair, providerName) {
@@ -345,7 +471,31 @@ async function loadFavoritesPage() {
     ]);
 
     state.favorites = Array.isArray(favoritesData?.favorites) ? favoritesData.favorites : [];
-    state.allRows = parseAllProviders(latestData);
+    let allRows = [];
+    try {
+      const providerMap = createProviderMapFromSnapshot(latestData);
+      try {
+        const entries = await getCurrentMonthlyEntries();
+        if (Array.isArray(entries) && entries.length) {
+          for (const entry of entries) {
+            const results = Array.isArray(entry?.results) ? entry.results : [];
+            for (const result of results) {
+              applyCompactResultToMap(providerMap, result);
+            }
+          }
+        }
+      } catch (errEntries) {
+        console.warn('[favsLoader] monthlies could not be applied for favorites', errEntries?.message || errEntries);
+      }
+
+      const fullSnapshot = snapshotFromProviderMap(providerMap, latestData);
+      allRows = parseAllProviders(fullSnapshot);
+    } catch (err) {
+      console.warn('[favsLoader] could not build merged snapshot for favorites', err?.message || err);
+      allRows = parseAllProviders(latestData);
+    }
+
+    state.allRows = allRows;
 
     // Keep only favorites that still exist in latest dataset.
     state.favorites = state.favorites.filter((fav) => Boolean(findRowByFavorite(state.allRows, fav)));

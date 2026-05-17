@@ -38,6 +38,15 @@ function getFreshnessClass(dateString) {
   if (diffDay < 7) return 'freshness--warn';
   return 'freshness--stale';
 }
+function normalizeProviderName(name) {
+  if (!name) return '';
+  return String(name)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 import { parseAllProviders } from './scrapeClientParser.js';
 
 const DATA_BASE_URL = globalThis.__SCRAPE_BASE_URL__ || 'https://fatihedu.github.io/ymproje1';
@@ -195,7 +204,7 @@ let csrfToken = '';
 let favoriteSet = new Set();
 
 function favoriteKey(pair, providerName) {
-  return `${pair}::${providerName}`;
+  return `${pair}::${normalizeProviderName(providerName)}`;
 }
 
 async function initAuthState() {
@@ -1270,18 +1279,44 @@ export async function loadLatestData() {
     const latest = await fetchJson(latestUrl);
     latestSnapshotCache = latest;
     let rows = [];
+    let effectiveLast = latest?.runStartedAt || null;
     try {
-      rows = filterVisibleRows(parseAllProviders(latest));
+      const providerMap = createProviderMapFromSnapshot(latest);
+      let lastEntryTs = null;
+
+      try {
+        const entries = await getCurrentMonthlyEntries();
+        if (Array.isArray(entries) && entries.length) {
+          for (const entry of entries) {
+            const results = Array.isArray(entry?.results) ? entry.results : [];
+            for (const result of results) {
+              applyCompactResultToMap(providerMap, result);
+            }
+          }
+          const lastEntry = entries[entries.length - 1];
+          lastEntryTs = lastEntry?.runStartedAt || lastEntry?.scheduledFor || null;
+        }
+      } catch (errEntries) {
+        console.warn('[homeDataLoader] monthlies could not be applied for list', errEntries?.message || errEntries);
+      }
+
+      const fullSnapshot = snapshotFromProviderMap(providerMap, latest);
+      rows = filterVisibleRows(parseAllProviders(fullSnapshot));
+      if (lastEntryTs) effectiveLast = lastEntryTs;
     } catch (e) {
-      console.error('[homeDataLoader] parseAllProviders failed', e);
-      rows = [];
+      console.error('[homeDataLoader] could not build merged rows for list', e);
+      try {
+        rows = filterVisibleRows(parseAllProviders(latest));
+      } catch (ee) {
+        rows = [];
+      }
     }
 
     latestLoadedRows = rows.slice();
     updateSummaryCards(rows);
     renderCurrencyList(rows);
 
-    renderMeta(`Son güncelleme: ${formatShortDateTime(latest.runStartedAt)}`);
+    renderMeta(`Son güncelleme: ${formatShortDateTime(effectiveLast)}`);
   } catch (error) {
     console.error(error);
     renderMeta(`Son veriler yüklenemedi: ${error.message}`);
