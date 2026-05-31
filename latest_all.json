@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-05-31T08:07:00+03:00",
-  "runStartedAt": "2026-05-31T08:43:48+03:00",
+  "scheduledFor": "2026-05-31T12:07:00+03:00",
+  "runStartedAt": "2026-05-31T12:20:30+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,7 +12,7 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-05-31T05:43:50.589Z",
+      "scrapedAt": "2026-05-31T09:20:33.362Z",
       "providerUpdatedAt": "2026-05-29T21:55:39+03:00",
       "providerFingerprint": "2c099d79047e693f254b280e0aa429c8955cd0ba102e69e23242f64fa1f5d61c",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
@@ -476,7 +476,7 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-05-31T05:43:51.463Z",
+      "scrapedAt": "2026-05-31T09:20:34.437Z",
       "providerUpdatedAt": null,
       "providerFingerprint": "00e9d6112d75f432b26f3eef719c68dfe9d01b9eb4b75400f98be7d2885d609a",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
@@ -547,11 +547,36 @@
         "name": "Yapı Kredi",
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
-      "ok": false,
-      "scrapedAt": "2026-05-31T05:44:01.481Z",
-      "providerUpdatedAt": null,
-      "error": {
-        "message": "fetch failed"
+      "ok": true,
+      "scrapedAt": "2026-05-31T09:20:35.587Z",
+      "providerUpdatedAt": "2026-05-31T12:17:19+03:00",
+      "providerFingerprint": "2cb48d559bb2093fc05eef15ce5847da7a77c8870a0d830487fce782323f63aa",
+      "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
+      "data": {
+        "EUR": {
+          "buy": 51.7682381,
+          "sell": 55.0326157,
+          "dailyStatus": "up",
+          "change": 0.103916183,
+          "previousDayBuyingPrice": 51.7124443,
+          "previousDaySellingPrice": 54.9775429
+        },
+        "USD": {
+          "buy": 44.3677635,
+          "sell": 47.2409058,
+          "dailyStatus": "up",
+          "change": 0.099589,
+          "previousDayBuyingPrice": 44.32184,
+          "previousDaySellingPrice": 47.19569
+        },
+        "XAU": {
+          "buy": 6500.313,
+          "sell": 7015.101,
+          "dailyStatus": "up",
+          "change": 0.107934564,
+          "previousDayBuyingPrice": 6492.993,
+          "previousDaySellingPrice": 7007.84863
+        }
       },
       "noChange": false
     }
