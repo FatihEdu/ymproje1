@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-06-13T01:07:00+03:00",
-  "runStartedAt": "2026-06-13T01:43:24+03:00",
+  "scheduledFor": "2026-06-13T04:07:00+03:00",
+  "runStartedAt": "2026-06-13T04:32:42+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,7 +12,7 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-06-12T22:43:26.789Z",
+      "scrapedAt": "2026-06-13T01:32:44.064Z",
       "providerUpdatedAt": "2026-06-12T19:45:27+03:00",
       "providerFingerprint": "3228a911f7dc6b8d1b7a1b6c41f6f27080cef4ab46d87772234adbbac2215fb9",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
@@ -466,7 +466,7 @@
           "flagCode": "us/aus"
         }
       },
-      "noChange": false
+      "noChange": true
     },
     {
       "meta": {
@@ -476,7 +476,7 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-06-12T22:43:27.380Z",
+      "scrapedAt": "2026-06-13T01:32:45.029Z",
       "providerUpdatedAt": null,
       "providerFingerprint": "bade164457f610ddd3980a206d32cd3a8183ab45f105d72e41f60b2b4ce2c273",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
@@ -538,7 +538,7 @@
           "changeRateNegative": true
         }
       },
-      "noChange": false
+      "noChange": true
     },
     {
       "meta": {
@@ -547,36 +547,11 @@
         "name": "Yapı Kredi",
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
-      "ok": true,
-      "scrapedAt": "2026-06-12T22:43:33.711Z",
-      "providerUpdatedAt": "2026-06-13T01:42:22+03:00",
-      "providerFingerprint": "d4b1d11549a6f651a6459fa602b6f16409fccef65406f0dafcdaac265abce5e9",
-      "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
-      "data": {
-        "EUR": {
-          "buy": 52.05129,
-          "sell": 54.72569,
-          "dailyStatus": "up",
-          "change": 0.0693713,
-          "previousDayBuyingPrice": 52.761116,
-          "previousDaySellingPrice": 53.9418449
-        },
-        "USD": {
-          "buy": 44.87195,
-          "sell": 47.44009,
-          "dailyStatus": "up",
-          "change": 0.105490305,
-          "previousDayBuyingPrice": 45.576973,
-          "previousDaySellingPrice": 46.63779
-        },
-        "XAU": {
-          "buy": 6122.90674,
-          "sell": 6574.75732,
-          "dailyStatus": "up",
-          "change": 1.72443092,
-          "previousDayBuyingPrice": 6138.511,
-          "previousDaySellingPrice": 6343.90234
-        }
+      "ok": false,
+      "scrapedAt": "2026-06-13T01:32:46.633Z",
+      "providerUpdatedAt": null,
+      "error": {
+        "message": "fetch failed"
       },
       "noChange": false
     }
