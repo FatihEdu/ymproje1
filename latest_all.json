@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-07-22T21:07:00+03:00",
-  "runStartedAt": "2026-07-22T21:18:47+03:00",
+  "scheduledFor": "2026-07-22T23:07:00+03:00",
+  "runStartedAt": "2026-07-22T23:18:33+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,7 +12,7 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-07-22T18:18:50.573Z",
+      "scrapedAt": "2026-07-22T20:18:36.376Z",
       "providerUpdatedAt": "2026-07-22T20:22:22+03:00",
       "providerFingerprint": "d3f136183b006bb5d1cd4c1051c26749cddef11607dde2484be1cc273a463b2d",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
@@ -466,7 +466,7 @@
           "flagCode": "us/aus"
         }
       },
-      "noChange": false
+      "noChange": true
     },
     {
       "meta": {
@@ -476,65 +476,65 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-07-22T18:18:51.549Z",
+      "scrapedAt": "2026-07-22T20:18:37.398Z",
       "providerUpdatedAt": null,
-      "providerFingerprint": "7b331489048aaeb5af60774b0c3770fed53af4fb278b5fb438bf4c421fb6daf7",
+      "providerFingerprint": "1ca43d6c37cd1cd3502e88ffcdfc36044da4d58cc9f6d0e6e3314cfad8b7cfec",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
       "data": {
         "USD": {
-          "buy": 46.61502,
-          "sell": 47.70607,
+          "buy": 46.62283,
+          "sell": 47.71126,
           "description": "Amerikan Doları",
           "title": "USD",
-          "changeRate": 0.12626477277902762,
+          "changeRate": 0.13715762801046302,
           "changeRateNegative": false
         },
         "EUR": {
-          "buy": 53.17841,
-          "sell": 54.42785,
+          "buy": 53.20364,
+          "sell": 54.44809,
           "description": "Euro",
           "title": "EUR",
-          "changeRate": 0.09993837072500929,
+          "changeRate": 0.13716237925416255,
           "changeRateNegative": false
         },
         "ALT (gr)": {
-          "buy": 6138.65411,
-          "sell": 6322.55234,
+          "buy": 6135.16709,
+          "sell": 6318.43966,
           "description": "Altın",
           "title": "ALT (gr)",
-          "changeRate": 2.4464278279559477,
+          "changeRate": 2.3797886999357787,
           "changeRateNegative": false
         },
         "GMS (gr)": {
-          "buy": 89.48001,
-          "sell": 92.17663,
+          "buy": 89.4911,
+          "sell": 92.17719,
           "description": "Gümüş",
           "title": "GMS (gr)",
-          "changeRate": 2.861112000741859,
+          "changeRate": 2.8617369120965095,
           "changeRateNegative": false
         },
         "PLT (gr)": {
-          "buy": 2445.72183,
-          "sell": 2533.64397,
+          "buy": 2452.89355,
+          "sell": 2540.89421,
           "description": "Platin",
           "title": "PLT (gr)",
-          "changeRate": 1.7414357201387916,
+          "changeRate": 2.032577583656253,
           "changeRateNegative": false
         },
         "ZCeyrek": {
-          "buy": 9918.48545,
-          "sell": 10325.77023,
+          "buy": 9912.85132,
+          "sell": 10319.05354,
           "description": "Çeyrek Altın (22 ayar)",
           "title": "Çeyrek",
-          "changeRate": 2.3668465263895264,
+          "changeRate": 2.3002591087848123,
           "changeRateNegative": false
         },
         "EUR/USD": {
-          "buy": 1.13704,
-          "sell": 1.14466,
+          "buy": 1.13738,
+          "sell": 1.14497,
           "description": "EUR/USD",
           "title": "EUR/USD",
-          "changeRate": -0.056254834399831234,
+          "changeRate": -0.02636945362492089,
           "changeRateNegative": true
         }
       },
@@ -548,32 +548,32 @@
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
       "ok": true,
-      "scrapedAt": "2026-07-22T18:18:54.128Z",
-      "providerUpdatedAt": "2026-07-22T21:17:21+03:00",
-      "providerFingerprint": "29aaffe14efdd6787f76f581fe3cec1ace5674b4cb67e5aae11399f1602cc839",
+      "scrapedAt": "2026-07-22T20:18:41.055Z",
+      "providerUpdatedAt": "2026-07-22T23:17:19+03:00",
+      "providerFingerprint": "e8ce7b0f32a4059bcbf527c81d1b68066119a233572bdd9d8cc270a0da37a2bc",
       "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
       "data": {
         "EUR": {
-          "buy": 52.3267059,
-          "sell": 54.9337578,
-          "dailyStatus": "same",
-          "change": 0.002907963,
+          "buy": 52.35064,
+          "sell": 54.9546623,
+          "dailyStatus": "up",
+          "change": 0.0447164252,
           "previousDayBuyingPrice": 53.0637627,
           "previousDaySellingPrice": 54.19358
         },
         "USD": {
-          "buy": 45.8068047,
-          "sell": 48.2128944,
+          "buy": 45.8154755,
+          "sell": 48.2188072,
           "dailyStatus": "down",
-          "change": -0.0274426341,
+          "change": -0.0119371209,
           "previousDayBuyingPrice": 46.5215073,
           "previousDaySellingPrice": 47.524
         },
         "XAU": {
-          "buy": 6050.143,
-          "sell": 6414.478,
+          "buy": 6046.495,
+          "sell": 6410.514,
           "dailyStatus": "up",
-          "change": 1.39756739,
+          "change": 1.33564866,
           "previousDayBuyingPrice": 6047.47656,
           "previousDaySellingPrice": 6245.34375
         }
