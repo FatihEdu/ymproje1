@@ -4,6 +4,7 @@ const router = express.Router();
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SUPPORTED_PAIRS = new Set(['USD/TRY', 'EUR/TRY', 'GBP/TRY', 'XAU/TRY']);
 const GRAMS_PER_TROY_OUNCE = 31.1034768;
+const MAX_HISTORY_YEARS = 10;
 const cache = new Map();
 const bankCache = new Map();
 
@@ -44,12 +45,30 @@ function validateRange(start, end, pair) {
   if (!SUPPORTED_PAIRS.has(pair)) {
     return 'Desteklenmeyen parite.';
   }
+
   const startDate = new Date(`${start}T00:00:00Z`);
   const endDate = new Date(`${end}T00:00:00Z`);
-  if (endDate - startDate > 366 * 24 * 60 * 60 * 1000) {
-    return 'Tek sorguda en fazla 366 günlük aralık seçilebilir.';
+  const maxEndDate = new Date(startDate);
+  maxEndDate.setUTCFullYear(maxEndDate.getUTCFullYear() + MAX_HISTORY_YEARS);
+
+  if (endDate > maxEndDate) {
+    return `Tek sorguda en fazla ${MAX_HISTORY_YEARS} yıllık aralık seçilebilir.`;
   }
   return null;
+}
+
+function rangeDays(start, end) {
+  const startDate = new Date(`${start}T00:00:00Z`);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  return Math.max(1, Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000)) + 1);
+}
+
+function timeoutForRange(start, end) {
+  const days = rangeDays(start, end);
+  if (days > 2500) return 60000;
+  if (days > 1000) return 45000;
+  if (days > 366) return 30000;
+  return 20000;
 }
 
 async function fetchRows(url, signal) {
@@ -162,7 +181,7 @@ router.get('/api/history/banks', async (req, res) => {
   if (bankCache.has(cacheKey)) return res.json(bankCache.get(cacheKey));
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), timeoutForRange(start, end));
 
   try {
     const series = await Promise.all(BANKS.map(async (bank) => {
@@ -192,6 +211,7 @@ router.get('/api/history/banks', async (req, res) => {
       sourceType: 'third-party-bank-specific-history',
       valueType: 'daily-close',
       note: 'Seriler bankaya özel günlük tarihsel fiyat/kapanış değeridir; her gün için ayrı alış-satış çifti değildir.',
+      maxHistoryYears: MAX_HISTORY_YEARS,
       pair,
       start,
       end,
@@ -219,7 +239,7 @@ router.get('/api/history/reference', async (req, res) => {
 
   const [base, quote] = pair.split('/');
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), timeoutForRange(start, end));
 
   try {
     let rows = [];
