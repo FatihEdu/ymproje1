@@ -7,6 +7,8 @@ const BANK_COLORS = {
   yapi: '#f59e0b'
 };
 
+let chartState = null;
+
 function renderMeta(message, isError = false) {
   const element = qs('#chart-meta');
   if (!element) return;
@@ -30,6 +32,18 @@ function hideLoading() {
 function formatDateLabel(dateString) {
   const [year, month, day] = String(dateString || '').split('-');
   return year && month && day ? `${day}.${month}` : dateString;
+}
+
+function formatFullDate(dateString) {
+  const [year, month, day] = String(dateString || '').split('-');
+  return year && month && day ? `${day}.${month}.${year}` : dateString;
+}
+
+function formatPrice(value, pair) {
+  return new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: pair === 'XAU/TRY' ? 2 : 4,
+    maximumFractionDigits: pair === 'XAU/TRY' ? 2 : 4
+  }).format(value);
 }
 
 function normalizeSeries(series) {
@@ -60,14 +74,11 @@ function renderLegend(series) {
   for (const item of series) {
     const legendItem = document.createElement('span');
     legendItem.className = 'chart-legend__item';
+    legendItem.style.setProperty('--legend-color', item.color);
 
     const dot = document.createElement('span');
-    dot.style.display = 'inline-block';
-    dot.style.width = '10px';
-    dot.style.height = '10px';
-    dot.style.borderRadius = '999px';
+    dot.className = 'chart-legend__dot';
     dot.style.background = item.color;
-    dot.style.marginRight = '6px';
 
     const label = document.createElement('span');
     label.className = 'chart-legend__text';
@@ -79,10 +90,130 @@ function renderLegend(series) {
   }
 }
 
+function ensureTooltip() {
+  const wrap = qs('.chart-wrap');
+  if (!wrap) return null;
+
+  let tooltip = qs('#chart-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip';
+    tooltip.className = 'chart-tooltip hidden';
+    tooltip.setAttribute('role', 'tooltip');
+    wrap.appendChild(tooltip);
+  }
+  return tooltip;
+}
+
+function hideTooltip() {
+  const tooltip = qs('#chart-tooltip');
+  if (tooltip) tooltip.classList.add('hidden');
+}
+
+function showTooltipForPointer(event) {
+  const canvas = qs('#range-chart');
+  const tooltip = ensureTooltip();
+  if (!canvas || !tooltip || !chartState?.allDates?.length) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const { padding, plotWidth, plotHeight, allDates, xForIndex, series, pair } = chartState;
+
+  if (
+    x < padding.left - 22 ||
+    x > padding.left + plotWidth + 22 ||
+    y < padding.top - 22 ||
+    y > padding.top + plotHeight + 22
+  ) {
+    hideTooltip();
+    return;
+  }
+
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  allDates.forEach((date, index) => {
+    const distance = Math.abs(x - xForIndex(index));
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+
+  const date = allDates[nearestIndex];
+  const rows = series
+    .map((item) => {
+      const point = item.points.find((candidate) => candidate.date === date);
+      return point ? { item, point } : null;
+    })
+    .filter(Boolean);
+
+  if (!rows.length) {
+    hideTooltip();
+    return;
+  }
+
+  tooltip.textContent = '';
+
+  const title = document.createElement('div');
+  title.className = 'chart-tooltip__date';
+  title.textContent = formatFullDate(date);
+  tooltip.appendChild(title);
+
+  for (const { item, point } of rows) {
+    const row = document.createElement('div');
+    row.className = 'chart-tooltip__row';
+
+    const label = document.createElement('span');
+    label.className = 'chart-tooltip__bank';
+
+    const dot = document.createElement('span');
+    dot.className = 'chart-tooltip__dot';
+    dot.style.background = item.color;
+
+    const name = document.createElement('span');
+    name.textContent = item.name;
+
+    label.appendChild(dot);
+    label.appendChild(name);
+
+    const value = document.createElement('strong');
+    value.className = 'chart-tooltip__value';
+    value.textContent = `${formatPrice(point.value, pair)} ₺`;
+
+    row.appendChild(label);
+    row.appendChild(value);
+    tooltip.appendChild(row);
+  }
+
+  tooltip.classList.remove('hidden');
+
+  const wrapRect = canvas.parentElement.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const localX = event.clientX - wrapRect.left;
+  const localY = event.clientY - wrapRect.top;
+
+  let left = localX + 14;
+  let top = localY + 14;
+  if (left + tooltipRect.width > wrapRect.width - 8) left = localX - tooltipRect.width - 14;
+  if (top + tooltipRect.height > wrapRect.height - 8) top = localY - tooltipRect.height - 14;
+
+  tooltip.style.left = `${Math.max(8, left)}px`;
+  tooltip.style.top = `${Math.max(8, top)}px`;
+}
+
+function bindCanvasHover(canvas) {
+  if (canvas.dataset.hoverBound === '1') return;
+  canvas.dataset.hoverBound = '1';
+  canvas.addEventListener('mousemove', showTooltipForPointer);
+  canvas.addEventListener('mouseleave', hideTooltip);
+}
+
 function drawBankHistory(rawSeries, pair) {
   const canvas = qs('#range-chart');
   if (!canvas || typeof canvas.getContext !== 'function') return;
 
+  hideTooltip();
   const series = normalizeSeries(rawSeries).filter((item) => item.points.length > 0);
   renderLegend(series);
 
@@ -90,20 +221,25 @@ function drawBankHistory(rawSeries, pair) {
   const dateIndex = new Map(allDates.map((date, index) => [date, index]));
   const values = series.flatMap((item) => item.points.map((point) => point.value)).filter(Number.isFinite);
 
-  const dpr = globalThis.devicePixelRatio || 1;
-  const cssWidth = canvas.clientWidth || 960;
-  const cssHeight = 280;
-  canvas.width = Math.floor(cssWidth * dpr);
-  canvas.height = Math.floor(cssHeight * dpr);
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = Math.max(320, Math.round(rect.width || canvas.clientWidth || 960));
+  const cssHeight = 320;
+  const dpr = Math.max(1, Math.min(3, globalThis.devicePixelRatio || 1));
+
+  canvas.style.height = `${cssHeight}px`;
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
   if (!values.length || !allDates.length) {
+    chartState = null;
     ctx.fillStyle = '#6b7280';
-    ctx.font = '14px Segoe UI';
+    ctx.font = '14px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Seçilen aralık için banka geçmiş verisi bulunamadı.', cssWidth / 2, cssHeight / 2);
@@ -117,7 +253,7 @@ function drawBankHistory(rawSeries, pair) {
   const max = rawMax + rawRange * 0.08;
   const range = max - min || 1;
 
-  const padding = { top: 24, right: 24, bottom: 40, left: 64 };
+  const padding = { top: 30, right: 22, bottom: 42, left: 70 };
   const plotWidth = cssWidth - padding.left - padding.right;
   const plotHeight = cssHeight - padding.top - padding.bottom;
   const xForIndex = (index) => allDates.length === 1
@@ -125,29 +261,36 @@ function drawBankHistory(rawSeries, pair) {
     : padding.left + (index / (allDates.length - 1)) * plotWidth;
   const yFor = (value) => padding.top + ((max - value) / range) * plotHeight;
 
-  ctx.fillStyle = '#f8fbff';
+  chartState = { series, allDates, pair, padding, plotWidth, plotHeight, xForIndex, yFor };
+  bindCanvasHover(canvas);
+
+  ctx.fillStyle = '#fbfdff';
   ctx.fillRect(padding.left, padding.top, plotWidth, plotHeight);
 
+  ctx.textBaseline = 'middle';
   for (let i = 0; i <= 4; i += 1) {
     const y = padding.top + (i / 4) * plotHeight;
-    ctx.strokeStyle = '#e5e7eb';
+    const crispY = Math.round(y) + 0.5;
+    ctx.strokeStyle = '#dfe5ec';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(padding.left, y);
-    ctx.lineTo(cssWidth - padding.right, y);
+    ctx.moveTo(padding.left, crispY);
+    ctx.lineTo(cssWidth - padding.right, crispY);
     ctx.stroke();
 
     const value = max - (i / 4) * range;
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '11px Segoe UI';
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(new Intl.NumberFormat('tr-TR', { maximumFractionDigits: pair === 'XAU/TRY' ? 2 : 4 }).format(value), 6, y + 4);
+    ctx.fillText(formatPrice(value, pair), 6, y);
   }
 
   for (const item of series) {
     const pointsByDate = new Map(item.points.map((point) => [point.date, point]));
     ctx.strokeStyle = item.color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
     let started = false;
 
@@ -174,29 +317,30 @@ function drawBankHistory(rawSeries, pair) {
       const index = dateIndex.get(point.date);
       if (index == null) continue;
       ctx.beginPath();
-      ctx.arc(xForIndex(index), yFor(point.value), allDates.length > 80 ? 1.3 : 2.2, 0, Math.PI * 2);
+      ctx.arc(xForIndex(index), yFor(point.value), allDates.length > 80 ? 2 : 3.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  const desiredTicks = Math.max(2, Math.min(7, Math.floor(plotWidth / 120)));
+  const desiredTicks = Math.max(2, Math.min(7, Math.floor(plotWidth / 125)));
+  ctx.textBaseline = 'alphabetic';
   for (let i = 0; i < desiredTicks; i += 1) {
     const index = Math.round((i * (allDates.length - 1)) / Math.max(1, desiredTicks - 1));
     const date = allDates[index];
     if (!date) continue;
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px Segoe UI';
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(formatDateLabel(date), xForIndex(index), cssHeight - 12);
   }
 
   ctx.fillStyle = '#111827';
-  ctx.font = '600 13px Segoe UI';
+  ctx.font = '600 13px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'left';
   const title = pair === 'XAU/TRY'
     ? 'Gram altın banka geçmiş fiyat grafiği'
     : `${pair} banka geçmiş fiyat grafiği`;
-  ctx.fillText(title, padding.left, 16);
+  ctx.fillText(title, padding.left, 18);
 }
 
 async function loadHistoryChart() {
@@ -213,6 +357,7 @@ async function loadHistoryChart() {
     return;
   }
 
+  renderMeta('');
   showLoading(`${start} - ${end} Garanti BBVA, Kuveyt Türk ve Yapı Kredi geçmiş verileri çekiliyor...`);
   try {
     const params = new URLSearchParams({ start, end, pair });
@@ -232,13 +377,8 @@ async function loadHistoryChart() {
       return;
     }
 
-    const counts = populated.map((item) => `${item.name}: ${item.points.length} gün`).join(' · ');
-    const missing = series.filter((item) => !item?.points?.length && item?.error);
-    const missingText = missing.length
-      ? ` · Alınamayan: ${missing.map((item) => item.name).join(', ')}`
-      : '';
-
-    renderMeta(`${start} - ${end} banka geçmişi yüklendi. ${counts}${missingText}. Kaynak: ${payload.source}. Değer tipi: günlük kapanış.`);
+    // Başarılı yüklemede üstte teknik durum metni göstermiyoruz.
+    renderMeta('');
   } catch (error) {
     console.error('[historyDataLoader]', error);
     drawBankHistory([], pair);
@@ -276,6 +416,7 @@ if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     configureDateInputs();
     takeOwnershipOfChartButton();
+    ensureTooltip();
     setTimeout(configureDateInputs, 1200);
   });
 }
