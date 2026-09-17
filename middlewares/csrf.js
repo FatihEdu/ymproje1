@@ -15,7 +15,7 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   cookieOptions: {
     secure: isProduction, // require HTTPS in production only
     path: '/',
-    sameSite: 'strict',
+    sameSite: 'strict', // strict and not lax because we don't want the token sent on any cross-site requests at all
     httpOnly: true,
   },
   getCsrfTokenFromRequest: (req) =>
@@ -29,5 +29,14 @@ function csrfMiddleware() {
   return doubleCsrfProtection;
 }
 
+function csrfSessionInit(req, res, next) {
+  if (req?.session && !req.session.csrfInitialized) {
+    // With saveUninitialized=false, mark session modified before token generation.
+    req.session.csrfInitialized = true;
+  }
+  next();
+}
+
 module.exports = csrfMiddleware;
 module.exports.generateCsrfToken = generateCsrfToken;
+module.exports.csrfSessionInit = csrfSessionInit;

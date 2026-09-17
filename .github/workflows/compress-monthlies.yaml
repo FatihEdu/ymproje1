@@ -1,0 +1,109 @@
+name: Compress Monthlies
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+      timezone: "Europe/Istanbul"
+
+permissions:
+  contents: read
+
+
+concurrency:
+  group: compress-monthlies-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout main branch contents
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install scraper module deps
+        working-directory: automation/scrape-pages
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Prepare gh-pages worktree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git ls-remote --exit-code --heads "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages > /dev/null 2>&1; then
+            git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages-worktree
+          else
+            mkdir gh-pages-worktree
+            cd gh-pages-worktree
+            git init
+            git checkout --orphan gh-pages
+          fi
+
+      - name: Run monthly compression
+        working-directory: automation/scrape-pages
+        env:
+          SCRAPE_OUTPUT_ROOT: ${{ github.workspace }}/gh-pages-worktree
+        run: npm run compress-monthlies
+
+      - name: Ensure Pages marker
+        run: touch gh-pages-worktree/.nojekyll
+
+      - name: Commit and push gh-pages data
+        working-directory: gh-pages-worktree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          else
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          git add -A
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(scrape-pages): compress closed monthlies"
+          git push origin HEAD:gh-pages
+
+      - name: Remove git metadata before Pages artifact upload
+        run: rm -rf gh-pages-worktree/.git
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages-worktree
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

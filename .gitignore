@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 *.json
 !package.json
 !package-lock.json
+
+# SCRAPER gh-pages related
+automation/scrape-pages/.generated/*
+!automation/scrape-pages/.generated/.gitkeep
