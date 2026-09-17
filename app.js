@@ -6,6 +6,7 @@ const pageRoutes = require('./routes/pageRoutes');
 const authRoutes = require('./routes/authRoutes');
 const favoritesRoutes = require('./routes/favoritesRoutes');
 const csrfRoutes = require('./routes/csrfRoutes');
+const historyRoutes = require('./routes/historyRoutes');
 const pageController = require('./controllers/pageController');
 const bodyMiddleware = require('./middlewares/body');
 const sessionMiddleware = require('./middlewares/session');
@@ -33,6 +34,7 @@ app.use('/', pageRoutes);
 app.use('/', authRoutes);
 app.use('/', favoritesRoutes);
 app.use('/', csrfRoutes);
+app.use('/', historyRoutes);
 
 // 404 handler
 app.use(pageController.get404Page);
