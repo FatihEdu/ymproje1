@@ -6,17 +6,8 @@ const SELECTED_PAIRS = ['USD/TRY', 'EUR/TRY', 'GBP/TRY', 'XAU/TRY'];
 const PALETTE = ['#1a56db', '#e11d48', '#059669', '#f59e0b', '#8b5cf6'];
 const monthlyCache = new Map();
 
-function qs(selector) {
-  return document.querySelector(selector);
-}
-
-function pad(value) {
-  return String(value).padStart(2, '0');
-}
-
-function monthKeyFromDateString(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.slice(0, 7) : null;
-}
+const qs = (selector) => document.querySelector(selector);
+const pad = (value) => String(value).padStart(2, '0');
 
 function monthKeyToIndex(monthKey) {
   if (!/^\d{4}-\d{2}$/.test(monthKey || '')) return null;
@@ -35,9 +26,9 @@ function enumerateMonthKeys(startMonthKey, endMonthKey) {
   const start = monthKeyToIndex(startMonthKey);
   const end = monthKeyToIndex(endMonthKey);
   if (start == null || end == null || start > end) return [];
-  const keys = [];
-  for (let i = start; i <= end; i += 1) keys.push(indexToMonthKey(i));
-  return keys;
+  const result = [];
+  for (let i = start; i <= end; i += 1) result.push(indexToMonthKey(i));
+  return result;
 }
 
 async function fetchText(url) {
@@ -46,15 +37,25 @@ async function fetchText(url) {
   return response.text();
 }
 
-async function fetchGzipText(url) {
+async function fetchArchiveText(url) {
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+
+  const buffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Some CDNs/browser stacks transparently decompress .gz responses. Detect that case
+  // before trying DecompressionStream so the same code works in both situations.
+  const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  if (!isGzip) {
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
   if (!('DecompressionStream' in globalThis)) {
     throw new Error('Tarayıcı gzip arşivlerini açmayı desteklemiyor.');
   }
 
-  const buffer = await response.arrayBuffer();
-  const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Response(stream).text();
 }
 
@@ -69,27 +70,31 @@ function parseJsonl(text) {
 async function fetchMonthlyEntries(monthKey) {
   if (monthlyCache.has(monthKey)) return monthlyCache.get(monthKey);
 
-  const currentUrl = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
   const [year, month] = monthKey.split('-');
+  const currentUrl = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
   const archiveUrl = `${DATA_BASE_URL}/monthlies/${year}/${month}.jsonl.gz`;
 
   let entries = [];
+  let source = 'missing';
+
   try {
     entries = parseJsonl(await fetchText(currentUrl));
-  } catch (currentError) {
+    source = 'current';
+  } catch {
     try {
-      entries = parseJsonl(await fetchGzipText(archiveUrl));
-    } catch (archiveError) {
-      console.warn(`[historyDataLoader] ${monthKey} arşivi bulunamadı`, archiveError?.message || archiveError);
-      entries = [];
+      entries = parseJsonl(await fetchArchiveText(archiveUrl));
+      source = 'archive';
+    } catch (error) {
+      console.warn(`[historyDataLoader] ${monthKey} bulunamadı`, error?.message || error);
     }
   }
 
-  monthlyCache.set(monthKey, entries);
-  return entries;
+  const value = { entries, source };
+  monthlyCache.set(monthKey, value);
+  return value;
 }
 
-function applyCompactResultToMap(providerMap, result) {
+function applyCompactResult(providerMap, result) {
   const id = result?.meta?.id;
   if (!id) return;
 
@@ -114,7 +119,7 @@ function applyCompactResultToMap(providerMap, result) {
   }
 }
 
-function snapshotFromProviderMap(providerMap, entry) {
+function snapshotFromMap(providerMap, entry) {
   return {
     rev: entry?.rev ?? 1,
     scheduledFor: entry?.scheduledFor ?? null,
@@ -124,25 +129,13 @@ function snapshotFromProviderMap(providerMap, entry) {
   };
 }
 
-function filterVisibleRows(rows) {
-  return (rows || []).filter((row) => SELECTED_PAIRS.includes(row.pair));
-}
-
 function getPairParity(rows, pair) {
-  const values = (rows || [])
+  const values = rows
     .filter((row) => row.pair === pair)
     .map((row) => row.parity)
     .filter(Number.isFinite);
   if (!values.length) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function formatNumber(value, digits = 4) {
-  if (!Number.isFinite(value)) return '-';
-  return new Intl.NumberFormat('tr-TR', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value);
 }
 
 function formatPointLabel(date) {
@@ -175,6 +168,7 @@ function renderLegend(seriesList) {
   container.textContent = '';
 
   for (const series of seriesList) {
+    if (!series.data.some((point) => Number.isFinite(point.value))) continue;
     const item = document.createElement('span');
     item.className = 'chart-legend__item';
     item.style.setProperty('--legend-color', series.color);
@@ -187,12 +181,12 @@ function renderLegend(seriesList) {
     swatch.style.background = series.color;
     swatch.style.marginRight = '6px';
 
-    const text = document.createElement('span');
-    text.className = 'chart-legend__text';
-    text.textContent = series.name;
+    const label = document.createElement('span');
+    label.className = 'chart-legend__text';
+    label.textContent = series.name;
 
     item.appendChild(swatch);
-    item.appendChild(text);
+    item.appendChild(label);
     container.appendChild(item);
   }
 }
@@ -200,6 +194,9 @@ function renderLegend(seriesList) {
 function drawChart(seriesList, pair) {
   const canvas = qs('#range-chart');
   if (!canvas || typeof canvas.getContext !== 'function') return;
+
+  const populated = seriesList.filter((series) => series.data.some((point) => Number.isFinite(point.value)));
+  renderLegend(populated);
 
   const dpr = globalThis.devicePixelRatio || 1;
   const cssWidth = canvas.clientWidth || 960;
@@ -211,9 +208,6 @@ function drawChart(seriesList, pair) {
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
-
-  const populated = seriesList.filter((series) => series.data.some((point) => Number.isFinite(point.value)));
-  renderLegend(populated);
 
   if (!populated.length) {
     ctx.fillStyle = '#6b7280';
@@ -231,14 +225,14 @@ function drawChart(seriesList, pair) {
   const min = rawMin - rawRange * 0.08;
   const max = rawMax + rawRange * 0.08;
   const range = max - min || 1;
+  const pointCount = Math.max(...populated.map((series) => series.data.length));
 
-  const pointsCount = Math.max(...populated.map((series) => series.data.length));
   const padding = { top: 22, right: 24, bottom: 40, left: 64 };
   const plotWidth = cssWidth - padding.left - padding.right;
   const plotHeight = cssHeight - padding.top - padding.bottom;
-  const xFor = (index) => pointsCount <= 1
+  const xFor = (index) => pointCount <= 1
     ? padding.left + plotWidth / 2
-    : padding.left + (index / (pointsCount - 1)) * plotWidth;
+    : padding.left + (index / (pointCount - 1)) * plotWidth;
   const yFor = (value) => padding.top + ((max - value) / range) * plotHeight;
 
   ctx.fillStyle = '#f8fbff';
@@ -257,7 +251,7 @@ function drawChart(seriesList, pair) {
     ctx.fillStyle = '#6b7280';
     ctx.font = '11px Segoe UI';
     ctx.textAlign = 'left';
-    ctx.fillText(formatNumber(value, 2), 6, y + 4);
+    ctx.fillText(new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }).format(value), 6, y + 4);
   }
 
   for (const series of populated) {
@@ -283,18 +277,16 @@ function drawChart(seriesList, pair) {
     ctx.stroke();
   }
 
-  const referenceSeries = populated[0];
+  const reference = populated[0];
   const tickCount = Math.max(2, Math.min(7, Math.floor(plotWidth / 120)));
   for (let i = 0; i < tickCount; i += 1) {
-    const index = tickCount === 1 ? 0 : Math.round((i * (pointsCount - 1)) / (tickCount - 1));
-    const point = referenceSeries.data[index];
-    const label = point?.label?.split(' ')[0] || '';
+    const index = Math.round((i * (pointCount - 1)) / Math.max(1, tickCount - 1));
+    const label = reference.data[index]?.label?.split(' ')[0] || '';
     if (!label) continue;
-    const x = xFor(index);
     ctx.fillStyle = '#64748b';
     ctx.font = '11px Segoe UI';
     ctx.textAlign = 'center';
-    ctx.fillText(label, x, cssHeight - 12);
+    ctx.fillText(label, xFor(index), cssHeight - 12);
   }
 
   ctx.fillStyle = '#111827';
@@ -306,37 +298,42 @@ function drawChart(seriesList, pair) {
 async function buildSnapshots(startDateValue, endDateValue) {
   const start = new Date(`${startDateValue}T00:00:00`);
   const end = new Date(`${endDateValue}T23:59:59`);
-  const endMonthKey = monthKeyFromDateString(endDateValue);
-  if (!endMonthKey) throw new Error('Bitiş tarihi geçersiz.');
-
+  const endMonthKey = endDateValue.slice(0, 7);
   const monthKeys = enumerateMonthKeys(HISTORY_START_MONTH, endMonthKey);
+
   const providerMap = new Map();
   const snapshots = [];
-  let previousTimestamp = null;
+  const monthReport = [];
+  let previousRealTimestamp = null;
 
+  // Always replay from the first archive month so compact no-change records inherit
+  // the correct provider data before the user's selected start date.
   for (const monthKey of monthKeys) {
-    const entries = await fetchMonthlyEntries(monthKey);
+    const { entries, source } = await fetchMonthlyEntries(monthKey);
+    monthReport.push({ monthKey, count: entries.length, source });
+
     for (const entry of entries) {
       const timestamp = new Date(entry?.runStartedAt || entry?.scheduledFor || '');
       if (Number.isNaN(timestamp.getTime())) continue;
 
-      const results = Array.isArray(entry?.results) ? entry.results : [];
-      for (const result of results) applyCompactResultToMap(providerMap, result);
+      for (const result of Array.isArray(entry?.results) ? entry.results : []) {
+        applyCompactResult(providerMap, result);
+      }
 
       if (timestamp < start || timestamp > end) continue;
 
-      if (previousTimestamp && timestamp - previousTimestamp > 36 * 60 * 60 * 1000) {
-        snapshots.push({ ts: new Date(previousTimestamp.getTime() + 1), rows: [], snapshot: null, gap: true });
+      if (previousRealTimestamp && timestamp - previousRealTimestamp > 36 * 60 * 60 * 1000) {
+        snapshots.push({ ts: new Date(previousRealTimestamp.getTime() + 1), rows: [], snapshot: null, gap: true });
       }
 
-      const snapshot = snapshotFromProviderMap(providerMap, entry);
-      const rows = filterVisibleRows(parseAllProviders(snapshot));
+      const snapshot = snapshotFromMap(providerMap, entry);
+      const rows = parseAllProviders(snapshot).filter((row) => SELECTED_PAIRS.includes(row.pair));
       snapshots.push({ ts: timestamp, rows, snapshot, gap: false });
-      previousTimestamp = timestamp;
+      previousRealTimestamp = timestamp;
     }
   }
 
-  return snapshots;
+  return { snapshots, monthReport };
 }
 
 function buildSeries(snapshots, pair) {
@@ -344,8 +341,7 @@ function buildSeries(snapshots, pair) {
   const providerNames = new Map();
 
   for (const item of snapshots) {
-    if (!item.snapshot) continue;
-    for (const result of item.snapshot.results || []) {
+    for (const result of item.snapshot?.results || []) {
       const id = result?.meta?.id;
       if (id) providerNames.set(id, result?.meta?.name || id);
     }
@@ -368,10 +364,7 @@ function buildSeries(snapshots, pair) {
     data: snapshots.map((item, snapshotIndex) => {
       if (item.gap) return { label: '', value: null };
       const rows = item.rows.filter((row) => row.providerId === providerId);
-      return {
-        label: labels[snapshotIndex],
-        value: getPairParity(rows, pair),
-      };
+      return { label: labels[snapshotIndex], value: getPairParity(rows, pair) };
     }),
   }));
 
@@ -391,33 +384,38 @@ async function loadHistoryChart() {
   const start = new Date(`${startValue}T00:00:00`);
   const end = new Date(`${endValue}T23:59:59`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
-    renderMeta('Aralık geçersiz. Başlangıç tarihi bitiş tarihinden büyük olamaz.', true);
+    renderMeta('Aralık geçersiz.', true);
     return;
   }
 
-  showLoading(`${startValue} - ${endValue} geçmiş verileri yükleniyor...`);
+  showLoading(`${startValue} - ${endValue} geçmiş verileri çekiliyor...`);
   try {
-    const snapshots = await buildSnapshots(startValue, endValue);
-    if (!snapshots.some((item) => !item.gap)) {
-      drawChart([], pair);
-      renderMeta('Seçilen aralıkta arşiv verisi bulunamadı. Ağustos 2026 arşivi kaynakta mevcut değil.', true);
+    const { snapshots, monthReport } = await buildSnapshots(startValue, endValue);
+    const realSnapshots = snapshots.filter((item) => !item.gap);
+    const series = buildSeries(snapshots, pair);
+    drawChart(series, pair);
+
+    const loadedMonths = monthReport.filter((item) => item.count > 0).map((item) => `${item.monthKey} (${item.count})`);
+    const missingMonths = monthReport.filter((item) => item.count === 0).map((item) => item.monthKey);
+
+    if (!realSnapshots.length) {
+      renderMeta(`Bu aralıkta snapshot yok. Bulunan aylar: ${loadedMonths.join(', ') || 'yok'}.`, true);
       return;
     }
 
-    const series = buildSeries(snapshots, pair);
-    drawChart(series, pair);
-    const realPoints = snapshots.filter((item) => !item.gap).length;
-    renderMeta(`${startValue} - ${endValue} aralığından ${realPoints} snapshot yüklendi.`);
+    let message = `${startValue} - ${endValue} aralığından ${realSnapshots.length} snapshot çekildi.`;
+    if (loadedMonths.length) message += ` Kaynak: ${loadedMonths.join(', ')}.`;
+    if (missingMonths.length) message += ` Veri olmayan aylar: ${missingMonths.join(', ')}.`;
+    renderMeta(message, false);
   } catch (error) {
     console.error('[historyDataLoader]', error);
-    drawChart([], pair);
-    renderMeta(`Geçmiş veri yüklenemedi: ${error.message}`, true);
+    renderMeta(`Geçmiş veri çekilemedi: ${error.message}`, true);
   } finally {
     hideLoading();
   }
 }
 
-function applyHistoryDateBounds() {
+function configureDateInputs() {
   const startInput = qs('#range-start-date');
   const endInput = qs('#range-end-date');
   if (!startInput || !endInput) return;
@@ -425,37 +423,27 @@ function applyHistoryDateBounds() {
   const now = new Date();
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   startInput.min = '2026-04-01';
-  startInput.max = today;
   endInput.min = '2026-04-01';
+  startInput.max = today;
   endInput.max = today;
 }
 
-function installHistoryLoader() {
-  applyHistoryDateBounds();
+function takeOwnershipOfChartButton() {
+  const button = qs('#range-load-btn');
+  if (!button) return;
 
-  const oldButton = qs('#range-load-btn');
-  if (oldButton) {
-    const newButton = oldButton.cloneNode(true);
-    oldButton.replaceWith(newButton);
-    newButton.addEventListener('click', () => {
-      applyHistoryDateBounds();
-      void loadHistoryChart();
-    });
-  }
-
-  const oldCanvas = qs('#range-chart');
-  if (oldCanvas) {
-    const newCanvas = oldCanvas.cloneNode(true);
-    oldCanvas.replaceWith(newCanvas);
-  }
-
-  applyHistoryDateBounds();
-  void loadHistoryChart();
+  // Capture phase prevents the old current-month-only handler from racing and
+  // overwriting the historical chart after this loader finishes.
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void loadHistoryChart();
+  }, true);
 }
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
-    // homeDataLoader kendi ilk yüklemesini tamamladıktan sonra tarih/grafik davranışını devral.
-    setTimeout(installHistoryLoader, 1400);
+    configureDateInputs();
+    takeOwnershipOfChartButton();
   });
 }
