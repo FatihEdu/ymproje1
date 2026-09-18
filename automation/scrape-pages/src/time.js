@@ -64,9 +64,18 @@ function getPartsInTz(date, timezone) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    hourCycle: "h23",
     hour12: false
   });
-  return Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
+  const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
+
+  // Some ICU/Node combinations can emit "24" for hour at midnight with hour12=false.
+  // Normalize to "00" so constructed ISO date-time strings stay valid.
+  if (parts.hour === "24") {
+    parts.hour = "00";
+  }
+
+  return parts;
 }
 
 export function getRunTiming(now = new Date()) {
