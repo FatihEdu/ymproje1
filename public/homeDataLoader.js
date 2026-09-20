@@ -67,6 +67,7 @@ const SELECTORS = {
   rangeButton: '#range-load-btn',
   chartPair: '#chart-pair',
   chartMetric: '#chart-metric',
+  chartShowGaps: '#chart-show-gaps',
   chartCanvas: '#range-chart',
   chartLegend: '#chart-legend',
   chartMeta: '#chart-meta',
@@ -994,8 +995,12 @@ function drawRangeChart(seriesArg, pair) {
     }
   }
   const timeSpan = maxTime - minTime;
+  // Checked by default: horizontal distances represent actual elapsed time.
+  // Unchecked: compress missing time by spacing existing samples evenly.
+  const showGaps = qs(SELECTORS.chartShowGaps)?.checked !== false;
+  const useTimeAxis = showGaps && hasTimeAxis;
   const xFor = (i) => {
-    if (hasTimeAxis) {
+    if (useTimeAxis) {
       if (timeSpan === 0) return padding.left + plotWidth / 2;
       return padding.left + ((timestamps[i] - minTime) / timeSpan) * plotWidth;
     }
@@ -1005,7 +1010,7 @@ function drawRangeChart(seriesArg, pair) {
   // Show missing data as a break, rather than connecting distant snapshots.
   // Four days keeps ordinary weekends connected, but not multi-week outages.
   const MAX_CONNECTED_GAP_MS = 4 * 24 * 60 * 60 * 1000;
-  const hasLargeTimeGap = (previousIndex, currentIndex) => hasTimeAxis &&
+  const hasLargeTimeGap = (previousIndex, currentIndex) => useTimeAxis &&
     previousIndex != null && timestamps[currentIndex] - timestamps[previousIndex] > MAX_CONNECTED_GAP_MS;
   const yFor = (v) => padding.top + ((max - v) / range) * plotHeight;
 
@@ -1171,7 +1176,8 @@ function drawRangeChart(seriesArg, pair) {
 
   // Place ticks at equal elapsed-time intervals, not equal sample indices.
   const desiredTicks = Math.max(3, Math.min(7, Math.floor(plotWidth / 120)));
-  const tickCount = hasTimeAxis && timeSpan > 0 ? desiredTicks : 1;
+  const tickCount = useTimeAxis && timeSpan > 0
+    ? desiredTicks : Math.min(desiredTicks, Math.max(1, N));
   const axisDateFormat = new Intl.DateTimeFormat('tr-TR', {
     day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Istanbul',
   });
@@ -1181,11 +1187,14 @@ function drawRangeChart(seriesArg, pair) {
 
   for (let tick = 0; tick < tickCount; tick += 1) {
     const fraction = tickCount === 1 ? 0.5 : tick / (tickCount - 1);
-    const x = padding.left + fraction * plotWidth;
-    const timestamp = tickCount === 1 ? (hasTimeAxis ? minTime : null) : minTime + fraction * timeSpan;
-    const dayLabel = timestamp != null
+    const pointIndex = Math.round(fraction * (N - 1));
+    const x = useTimeAxis ? padding.left + fraction * plotWidth : xFor(pointIndex);
+    const timestamp = useTimeAxis
+      ? (tickCount === 1 ? minTime : minTime + fraction * timeSpan)
+      : (hasTimeAxis ? timestamps[pointIndex] : null);
+    const dayLabel = timestamp != null && Number.isFinite(timestamp)
       ? axisDateFormat.format(new Date(timestamp))
-      : String(visibleSeriesList[0].data[0]?.label || '').split(' ')[0];
+      : String(visibleSeriesList[0].data[pointIndex]?.label || '').split(' ')[0];
     if (!dayLabel) continue;
 
     ctx.strokeStyle = '#94a3b8';
@@ -1204,7 +1213,7 @@ function drawRangeChart(seriesArg, pair) {
 
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
-  ctx.fillText(`${pair} ${getChartMetricLabel(getChartMetric())} grafiği`, padding.left, 14);
+  ctx.fillText(`${pair} ${getChartMetricLabel(getChartMetric())} grafiği${showGaps ? '' : ' (boşluklar gizli)'}`, padding.left, 14);
 
   return 'ok';
 }
@@ -1580,6 +1589,11 @@ async function init() {
     if (typeof wireSortHeaders === 'function') wireSortHeaders();
     if (typeof wireRangeLoader === 'function') wireRangeLoader();
     wireChartMetric();
+    const gapToggle = qs(SELECTORS.chartShowGaps);
+    if (gapToggle) gapToggle.addEventListener('change', () => {
+      chartHoverIndex = null;
+      drawRangeChart(chartLastSeries, chartLastPair);
+    });
     drawRangeChart([], 'USD/TRY');
     renderChartMeta('');
     if (typeof initAuthState === 'function') {
