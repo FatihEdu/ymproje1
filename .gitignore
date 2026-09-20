@@ -151,3 +151,6 @@ vite.config.ts.timestamp-*
 # SCRAPER gh-pages related
 automation/scrape-pages/.generated/*
 !automation/scrape-pages/.generated/.gitkeep
+
+# PATCH files for git in github codespaces
+*.patch
