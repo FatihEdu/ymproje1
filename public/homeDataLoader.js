@@ -67,6 +67,7 @@ const SELECTORS = {
   rangeButton: '#range-load-btn',
   chartPair: '#chart-pair',
   chartMetric: '#chart-metric',
+  chartShowGaps: '#chart-show-gaps',
   chartCanvas: '#range-chart',
   chartLegend: '#chart-legend',
   chartMeta: '#chart-meta',
@@ -983,10 +984,34 @@ function drawRangeChart(seriesArg, pair) {
   const range = max - min || 1;
 
   const N = Math.max(1, visibleSeriesList[0].data.length);
+  const timestamps = visibleSeriesList[0].data.map((point) => point.time);
+  const hasTimeAxis = timestamps.length === N && timestamps.every(Number.isFinite);
+  let minTime = Infinity;
+  let maxTime = -Infinity;
+  if (hasTimeAxis) {
+    for (const time of timestamps) {
+      if (time < minTime) minTime = time;
+      if (time > maxTime) maxTime = time;
+    }
+  }
+  const timeSpan = maxTime - minTime;
+  // Checked by default: horizontal distances represent actual elapsed time.
+  // Unchecked: compress missing time by spacing existing samples evenly.
+  const showGaps = qs(SELECTORS.chartShowGaps)?.checked !== false;
+  const useTimeAxis = showGaps && hasTimeAxis;
   const xFor = (i) => {
+    if (useTimeAxis) {
+      if (timeSpan === 0) return padding.left + plotWidth / 2;
+      return padding.left + ((timestamps[i] - minTime) / timeSpan) * plotWidth;
+    }
     if (N === 1) return padding.left + plotWidth / 2;
     return padding.left + (i / (N - 1)) * plotWidth;
   };
+  // Show missing data as a break, rather than connecting distant snapshots.
+  // Four days keeps ordinary weekends connected, but not multi-week outages.
+  const MAX_CONNECTED_GAP_MS = 4 * 24 * 60 * 60 * 1000;
+  const hasLargeTimeGap = (previousIndex, currentIndex) => useTimeAxis &&
+    previousIndex != null && timestamps[currentIndex] - timestamps[previousIndex] > MAX_CONNECTED_GAP_MS;
   const yFor = (v) => padding.top + ((max - v) / range) * plotHeight;
 
   // chart area background
@@ -1028,20 +1053,25 @@ function drawRangeChart(seriesArg, pair) {
     let firstX = null;
     let lastX = null;
     let started = false;
+    let previousIndex = null;
+    const finishArea = () => {
+      if (!started) return;
+      ctx.lineTo(lastX, baselineY);
+      ctx.lineTo(firstX, baselineY);
+      ctx.closePath();
+      ctx.fill();
+      started = false;
+      firstX = null;
+      lastX = null;
+    };
     for (let i = 0; i < avgSeries.data.length; i += 1) {
       const p = avgSeries.data[i];
       if (!Number.isFinite(p.value)) {
-        if (started) {
-          ctx.lineTo(lastX, baselineY);
-          ctx.lineTo(firstX, baselineY);
-          ctx.closePath();
-          ctx.fill();
-          started = false;
-          firstX = null;
-          lastX = null;
-        }
+        finishArea();
+        previousIndex = null;
         continue;
       }
+      if (hasLargeTimeGap(previousIndex, i)) finishArea();
       const x = xFor(i);
       const y = yFor(p.value);
       if (!started) {
@@ -1054,13 +1084,9 @@ function drawRangeChart(seriesArg, pair) {
         ctx.lineTo(x, y);
       }
       lastX = x;
+      previousIndex = i;
     }
-    if (started) {
-      ctx.lineTo(lastX, baselineY);
-      ctx.lineTo(firstX, baselineY);
-      ctx.closePath();
-      ctx.fill();
-    }
+    finishArea();
   }
 
   // Draw lines and points for each series.
@@ -1073,20 +1099,23 @@ function drawRangeChart(seriesArg, pair) {
 
     ctx.beginPath();
     let started = false;
+    let previousIndex = null;
     for (let i = 0; i < s.data.length; i += 1) {
       const p = s.data[i];
       if (!Number.isFinite(p.value)) {
         started = false;
+        previousIndex = null;
         continue;
       }
       const x = xFor(i);
       const y = yFor(p.value);
-      if (!started) {
+      if (!started || hasLargeTimeGap(previousIndex, i)) {
         ctx.moveTo(x, y);
         started = true;
       } else {
         ctx.lineTo(x, y);
       }
+      previousIndex = i;
     }
     ctx.stroke();
 
@@ -1145,33 +1174,29 @@ function drawRangeChart(seriesArg, pair) {
     ctx.fillText(tooltipLine2, tx + 8, ty + 30);
   }
 
-  // Draw evenly spaced day labels (dd.mm) on x-axis.
+  // Place ticks at equal elapsed-time intervals, not equal sample indices.
   const desiredTicks = Math.max(3, Math.min(7, Math.floor(plotWidth / 120)));
-  const tickIndexes = [];
-  if (N === 1) {
-    tickIndexes.push(0);
-  } else {
-    for (let t = 0; t < desiredTicks; t += 1) {
-      const idx = Math.round((t * (N - 1)) / (desiredTicks - 1));
-      if (tickIndexes[tickIndexes.length - 1] !== idx) tickIndexes.push(idx);
-    }
-  }
+  const tickCount = useTimeAxis && timeSpan > 0
+    ? desiredTicks : Math.min(desiredTicks, Math.max(1, N));
+  const axisDateFormat = new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Istanbul',
+  });
 
   ctx.fillStyle = '#64748b';
   ctx.font = '11px Segoe UI';
-  let lastDrawnLabel = '';
 
-  for (const pointIndex of tickIndexes) {
-    const point = visibleSeriesList[0].data[pointIndex];
-    const dayLabel = String(point?.label || '').split(' ')[0] || '';
+  for (let tick = 0; tick < tickCount; tick += 1) {
+    const fraction = tickCount === 1 ? 0.5 : tick / (tickCount - 1);
+    const pointIndex = Math.round(fraction * (N - 1));
+    const x = useTimeAxis ? padding.left + fraction * plotWidth : xFor(pointIndex);
+    const timestamp = useTimeAxis
+      ? (tickCount === 1 ? minTime : minTime + fraction * timeSpan)
+      : (hasTimeAxis ? timestamps[pointIndex] : null);
+    const dayLabel = timestamp != null && Number.isFinite(timestamp)
+      ? axisDateFormat.format(new Date(timestamp))
+      : String(visibleSeriesList[0].data[pointIndex]?.label || '').split(' ')[0];
     if (!dayLabel) continue;
 
-    // Skip only exact duplicates to avoid repeated same-day text.
-    if (dayLabel === lastDrawnLabel && tickIndexes.length > 1) continue;
-
-    const x = xFor(pointIndex);
-
-    // small tick mark
     ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1184,12 +1209,11 @@ function drawRangeChart(seriesArg, pair) {
     const maxX = cssWidth - padding.right - textWidth;
     const textX = Math.min(Math.max(x - textWidth / 2, minX), maxX);
     ctx.fillText(dayLabel, textX, cssHeight - 12);
-    lastDrawnLabel = dayLabel;
   }
 
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
-  ctx.fillText(`${pair} ${getChartMetricLabel(getChartMetric())} grafiği`, padding.left, 14);
+  ctx.fillText(`${pair} ${getChartMetricLabel(getChartMetric())} grafiği${showGaps ? '' : ' (boşluklar gizli)'}`, padding.left, 14);
 
   return 'ok';
 }
@@ -1207,7 +1231,7 @@ function renderChartFromSnapshots(resetSelection = false) {
     color: '#1a56db',
     data: snapshots.map((s, i) => {
       const value = getPairMetric(s.rows, pair, metric);
-      return { label: labels[i], value: Number.isFinite(value) ? value : null };
+      return { label: labels[i], time: s.ts.getTime(), value: Number.isFinite(value) ? value : null };
     }),
   };
 
@@ -1245,7 +1269,7 @@ function renderChartFromSnapshots(resetSelection = false) {
     for (const series of providerSeries) {
       const rows = rowsByProvider.get(series.id) || [];
       const value = getPairMetric(rows, pair, metric);
-      series.data.push({ label: labels[i], value: Number.isFinite(value) ? value : null });
+      series.data.push({ label: labels[i], time: snapshots[i].ts.getTime(), value: Number.isFinite(value) ? value : null });
     }
   }
 
@@ -1565,6 +1589,11 @@ async function init() {
     if (typeof wireSortHeaders === 'function') wireSortHeaders();
     if (typeof wireRangeLoader === 'function') wireRangeLoader();
     wireChartMetric();
+    const gapToggle = qs(SELECTORS.chartShowGaps);
+    if (gapToggle) gapToggle.addEventListener('change', () => {
+      chartHoverIndex = null;
+      drawRangeChart(chartLastSeries, chartLastPair);
+    });
     drawRangeChart([], 'USD/TRY');
     renderChartMeta('');
     if (typeof initAuthState === 'function') {
