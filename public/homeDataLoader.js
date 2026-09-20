@@ -66,6 +66,7 @@ const SELECTORS = {
   rangeEndInput: '#range-end-date',
   rangeButton: '#range-load-btn',
   chartPair: '#chart-pair',
+  chartMetric: '#chart-metric',
   chartCanvas: '#range-chart',
   chartLegend: '#chart-legend',
   chartMeta: '#chart-meta',
@@ -84,6 +85,7 @@ let latestSnapshotCache = null;
 let currentMonthlyEntriesCache = null;
 let chartLastSeries = [];
 let chartLastPair = 'USD/TRY';
+let chartSnapshotCache = null;
 let chartVisibleSeriesIds = new Set();
 let chartLegendSignature = '';
 let chartPointPixels = [];
@@ -748,10 +750,33 @@ async function fetchMonthlyEntries(monthKey) {
   return parseJsonl(jsonlText);
 }
 
-function getPairParity(rows, pair) {
-  const matches = rows.filter((r) => r.pair === pair).map((r) => r.parity).filter(Number.isFinite);
-  if (!matches.length) return null;
-  return matches.reduce((a, b) => a + b, 0) / matches.length;
+// Grafikteki tüm seriler aynı seçili ölçüyü kullanır; eksik alış/satış değerleri atlanır.
+function getChartMetric() {
+  const metric = qs(SELECTORS.chartMetric)?.value;
+  return ['sell', 'buy', 'mid', 'spread'].includes(metric) ? metric : 'sell';
+}
+
+function getChartMetricLabel(metric) {
+  return { sell: 'Satış Kuru', buy: 'Alış Kuru', mid: 'Ortalama Kur', spread: 'Makas' }[metric] || 'Satış Kuru';
+}
+
+function getChartMetricValue(row, metric) {
+  if (!row) return null;
+  if (metric === 'sell') return Number.isFinite(row.sell) ? row.sell : null;
+  if (metric === 'buy') return Number.isFinite(row.buy) ? row.buy : null;
+  if (!Number.isFinite(row.buy) || !Number.isFinite(row.sell)) return null;
+  if (metric === 'mid') return (row.buy + row.sell) / 2;
+  if (metric === 'spread') return row.sell - row.buy;
+  return null;
+}
+
+function getPairMetric(rows, pair, metric) {
+  const values = rows
+    .filter((row) => row.pair === pair)
+    .map((row) => getChartMetricValue(row, metric))
+    .filter(Number.isFinite);
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function ensureChartHoverEvents(canvas) {
@@ -1108,13 +1133,74 @@ function drawRangeChart(seriesArg, pair) {
 
   ctx.fillStyle = '#111827';
   ctx.font = '600 13px Segoe UI';
-  ctx.fillText(`${pair} aralık grafiği`, padding.left, 14);
+  ctx.fillText(`${pair} ${getChartMetricLabel(getChartMetric())} grafiği`, padding.left, 14);
 
   return 'ok';
 }
 
+// Dropdown değişince geçmiş verileri yeniden indirmeden yalnızca serileri hesapla.
+function renderChartFromSnapshots(resetSelection = false) {
+  if (!chartSnapshotCache) return 'no-data';
+  const { snapshots, pair, startDateValue } = chartSnapshotCache;
+  const metric = getChartMetric();
+  const labels = snapshots.map((s) => formatChartPointLabel(s.ts.toISOString(), startDateValue));
+
+  const avgSeries = {
+    id: 'avg',
+    name: 'Bankalar Ortalaması',
+    color: '#1a56db',
+    data: snapshots.map((s, i) => {
+      const value = getPairMetric(s.rows, pair, metric);
+      return { label: labels[i], value: Number.isFinite(value) ? value : null };
+    }),
+  };
+
+  const providerIdSet = new Set();
+  for (const s of snapshots) {
+    const results = Array.isArray(s.snapshot?.results) ? s.snapshot.results : [];
+    for (const result of results) {
+      const id = result?.meta?.id;
+      if (id) providerIdSet.add(id);
+    }
+  }
+  const providerSeries = Array.from(providerIdSet).map((pid, idx) => {
+    let name = pid;
+    for (const s of snapshots) {
+      const found = (s.snapshot?.results || []).find((r) => r?.meta?.id === pid);
+      if (found) {
+        name = found.meta?.name || pid;
+        break;
+      }
+    }
+    return {
+      id: pid,
+      name,
+      color: CHART_PALETTE[idx % CHART_PALETTE.length],
+      data: [],
+    };
+  });
+
+  for (let i = 0; i < snapshots.length; i += 1) {
+    const rowsByProvider = new Map();
+    for (const row of snapshots[i].rows || []) {
+      if (!rowsByProvider.has(row.providerId)) rowsByProvider.set(row.providerId, []);
+      rowsByProvider.get(row.providerId).push(row);
+    }
+    for (const series of providerSeries) {
+      const rows = rowsByProvider.get(series.id) || [];
+      const value = getPairMetric(rows, pair, metric);
+      series.data.push({ label: labels[i], value: Number.isFinite(value) ? value : null });
+    }
+  }
+
+  const seriesList = [avgSeries, ...providerSeries];
+  if (resetSelection) chartVisibleSeriesIds = new Set(seriesList.map((series) => series.id));
+  return drawRangeChart(seriesList, pair);
+}
+
 async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) {
   const { silentFailure = false, manageLoading = true } = options;
+  chartSnapshotCache = null;
   const start = new Date(`${startDateValue}T00:00:00`);
   const end = new Date(`${endDateValue}T23:59:59`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
@@ -1153,67 +1239,8 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
       return false;
     }
 
-    const labels = snapshots.map((s) => formatChartPointLabel(s.ts.toISOString(), startDateValue));
-
-    const avgSeries = {
-      id: 'avg',
-      name: 'Ortalama',
-      color: '#1a56db',
-      data: snapshots.map((s, i) => {
-        const v = getPairParity(s.rows, pair);
-        return { label: labels[i], value: Number.isFinite(v) ? v : null };
-      }),
-    };
-
-    const providerIdSet = new Set();
-    for (const s of snapshots) {
-      const results = Array.isArray(s.snapshot?.results) ? s.snapshot.results : [];
-      for (const r of results) {
-        const id = r?.meta?.id;
-        if (id) providerIdSet.add(id);
-      }
-    }
-    const providerIds = Array.from(providerIdSet);
-    const palette = ['#e11d48', '#059669', '#f59e0b', '#8b5cf6', '#06b6d4'];
-
-    const providerSeries = providerIds.map((pid, idx) => {
-      let name = pid;
-      for (const s of snapshots) {
-        const found = (s.snapshot?.results || []).find((r) => r?.meta?.id === pid);
-        if (found) {
-          name = found.meta?.name || pid;
-          break;
-        }
-      }
-      return {
-        id: pid,
-        name,
-        color: palette[idx % palette.length],
-        data: [],
-      };
-    });
-
-    for (let i = 0; i < snapshots.length; i += 1) {
-      const s = snapshots[i];
-      const rowsByProvider = new Map();
-      for (const r of (s.rows || [])) {
-        const bucket = rowsByProvider.get(r.providerId);
-        if (bucket) {
-          bucket.push(r);
-        } else {
-          rowsByProvider.set(r.providerId, [r]);
-        }
-      }
-      for (const ps of providerSeries) {
-        const provRows = rowsByProvider.get(ps.id) || [];
-        const v = getPairParity(provRows, pair);
-        ps.data.push({ label: labels[i], value: Number.isFinite(v) ? v : null });
-      }
-    }
-
-    const seriesList = [avgSeries, ...providerSeries];
-    chartVisibleSeriesIds = new Set(seriesList.map((series) => series.id));
-    const chartStatus = drawRangeChart(seriesList, pair);
+    chartSnapshotCache = { snapshots, pair, startDateValue };
+    const chartStatus = renderChartFromSnapshots(true);
     if (chartStatus === 'ok' || chartStatus === 'no-data') {
       renderChartMeta('');
     }
@@ -1395,6 +1422,17 @@ function wireRangeLoader() {
   });
 }
 
+function wireChartMetric() {
+  const select = qs(SELECTORS.chartMetric);
+  if (!select) return;
+  select.addEventListener('change', () => {
+    if (!chartSnapshotCache) return;
+    chartHoverIndex = null;
+    const status = renderChartFromSnapshots();
+    if (status === 'ok' || status === 'no-data') renderChartMeta('');
+  });
+}
+
 function setCurrentYear() {
   const el = document.getElementById('year');
   const now = new Date();
@@ -1423,6 +1461,7 @@ async function init() {
     const boundsPromise = applyDateInputBounds();
     if (typeof wireSortHeaders === 'function') wireSortHeaders();
     if (typeof wireRangeLoader === 'function') wireRangeLoader();
+    wireChartMetric();
     drawRangeChart([], 'USD/TRY');
     renderChartMeta('');
     if (typeof initAuthState === 'function') {
