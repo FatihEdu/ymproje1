@@ -83,6 +83,8 @@ let latestLoadedRows = [];
 let currentSort = { key: null, asc: true };
 let latestSnapshotCache = null;
 let currentMonthlyEntriesCache = null;
+let archiveIndexPromise = null;
+const monthlyEntriesCache = new Map();
 let chartLastSeries = [];
 let chartLastPair = 'USD/TRY';
 let chartSnapshotCache = null;
@@ -596,7 +598,7 @@ function formatChartPointLabel(dateString, fallbackMonthKey) {
   const d = new Date(dateString);
   if (Number.isNaN(d.getTime())) return fallbackMonthKey;
   const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 async function getLatestSnapshot() {
@@ -633,6 +635,38 @@ async function getCurrentMonthlyEntries() {
   const text = await fetchText(currentMonthlyPath);
   currentMonthlyEntriesCache = parseJsonl(text);
   return currentMonthlyEntriesCache;
+}
+
+// Only read the existing gh-pages tree: no schema changes, no archive rewrites.
+// Static GitHub Pages has no directory-listing endpoint; GitHub's public tree
+// API supplies archive filenames (not their contents) with one extra request.
+async function getAvailableMonths() {
+  if (!archiveIndexPromise) {
+    archiveIndexPromise = (async () => {
+      const [index, tree] = await Promise.all([
+        fetchJson(`${DATA_BASE_URL}/index.json`),
+        fetchJson('https://api.github.com/repos/FatihEdu/ymproje1/git/trees/gh-pages?recursive=1'),
+      ]);
+      if (tree?.truncated || !Array.isArray(tree?.tree)) {
+        throw new Error('Arşiv dosyalarının tam listesi alınamadı. Lütfen yeniden deneyin.');
+      }
+      const months = new Set();
+      for (const item of tree.tree) {
+        if (item?.type !== 'blob') continue;
+        const live = /^monthlies\/current\/(\d{4}-(?:0[1-9]|1[0-2]))\.jsonl$/.exec(item.path);
+        const closed = /^monthlies\/(\d{4})\/(0[1-9]|1[0-2])\.jsonl\.gz$/.exec(item.path);
+        if (live) months.add(live[1]);
+        if (closed) months.add(`${closed[1]}-${closed[2]}`);
+      }
+      const current = /^monthlies\/current\/(\d{4}-(?:0[1-9]|1[0-2]))\.jsonl$/.exec(index?.currentMonthly || '');
+      if (current) months.add(current[1]);
+      return [...months].sort();
+    })().catch((error) => {
+      archiveIndexPromise = null; // Permit retry after API/network errors.
+      throw error;
+    });
+  }
+  return archiveIndexPromise;
 }
 
 function toDateOnlyString(dateValue) {
@@ -680,11 +714,18 @@ async function applyDateInputBounds() {
   if (!rangeStartInput || !rangeEndInput) return;
 
   try {
-    const entries = await getCurrentMonthlyEntries();
-    const bounds = getAvailableDateBounds(entries);
-    if (!bounds) return;
+    const months = await getAvailableMonths();
+    if (!months.length) return;
+    const [firstEntries, lastEntries] = await Promise.all([
+      fetchMonthlyEntries(months[0]),
+      months.length === 1 ? fetchMonthlyEntries(months[0]) : fetchMonthlyEntries(months[months.length - 1]),
+    ]);
+    const firstBounds = getAvailableDateBounds(firstEntries);
+    const lastBounds = getAvailableDateBounds(lastEntries);
+    if (!firstBounds || !lastBounds) return;
 
-    const { minDate, maxDate } = bounds;
+    const minDate = firstBounds.minDate;
+    const maxDate = lastBounds.maxDate;
     rangeStartInput.min = minDate;
     rangeStartInput.max = maxDate;
     rangeEndInput.min = minDate;
@@ -736,18 +777,29 @@ function enumerateMonthKeys(startMonthKey, endMonthKey) {
 }
 
 async function fetchMonthlyEntries(monthKey) {
-  let jsonlText = '';
-  const currentPath = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
-
-  try {
-    jsonlText = await fetchText(currentPath);
-  } catch {
-    const [year, month] = monthKey.split('-');
-    const closedPath = `${DATA_BASE_URL}/monthlies/${year}/${month}.jsonl.gz`;
-    jsonlText = await fetchGzipText(closedPath);
+  if (!monthlyEntriesCache.has(monthKey)) {
+    const request = (async () => {
+      const currentPath = `${DATA_BASE_URL}/monthlies/current/${monthKey}.jsonl`;
+      let jsonlText;
+      try {
+        jsonlText = await fetchText(currentPath);
+      } catch {
+        const [year, month] = monthKey.split('-');
+        jsonlText = await fetchGzipText(`${DATA_BASE_URL}/monthlies/${year}/${month}.jsonl.gz`);
+      }
+      return parseJsonl(jsonlText);
+    })();
+    monthlyEntriesCache.set(monthKey, request);
+    // Keep only a few full monthly archives in memory for long date ranges.
+    if (monthlyEntriesCache.size > 6) {
+      monthlyEntriesCache.delete(monthlyEntriesCache.keys().next().value);
+    }
+    // A transient network error must not poison subsequent retries.
+    request.catch(() => {
+      if (monthlyEntriesCache.get(monthKey) === request) monthlyEntriesCache.delete(monthKey);
+    });
   }
-
-  return parseJsonl(jsonlText);
+  return monthlyEntriesCache.get(monthKey);
 }
 
 // Grafikteki tüm seriler aynı seçili ölçüyü kullanır; eksik alış/satış değerleri atlanır.
@@ -919,8 +971,12 @@ function drawRangeChart(seriesArg, pair) {
     ctx.textBaseline = 'alphabetic';
     return 'no-data';
   }
-  const rawMin = Math.min(...values);
-  const rawMax = Math.max(...values);
+  let rawMin = Infinity;
+  let rawMax = -Infinity;
+  for (const value of values) {
+    if (value < rawMin) rawMin = value;
+    if (value > rawMax) rawMax = value;
+  }
   const rawRange = rawMax - rawMin || 1;
   const min = rawMin - rawRange * 0.08;
   const max = rawMax + rawRange * 0.08;
@@ -1215,22 +1271,69 @@ async function loadRangeChart(startDateValue, endDateValue, pair, options = {}) 
     showLoading(`${startDateValue} - ${endDateValue} günlük aralığı yükleniyor...`);
   }
   try {
-    const baseSnapshot = await getLatestSnapshot();
-    const providerMap = createProviderMapFromSnapshot(baseSnapshot);
-    const entries = await getCurrentMonthlyEntries();
+    const availableMonths = await getAvailableMonths();
+    const requestedMonths = availableMonths.filter((key) =>
+      key >= startDateValue.slice(0, 7) && key <= endDateValue.slice(0, 7)
+    );
+    if (!requestedMonths.length) {
+      drawRangeChart([], pair);
+      renderChartMeta('Seçilen aralıkta grafik verisi bulunamadı.');
+      return true;
+    }
 
-    // Collect snapshots within requested range (apply incremental provider updates).
+    // Reconstruct chronologically. Seeding older months with latest_all.json
+    // would silently insert future quotes into historical noChange entries.
+    const providerMap = new Map();
+    const firstEntries = await fetchMonthlyEntries(requestedMonths[0]);
+    // A new month can start with compact noChange rows. Look backwards only
+    // for those providers' last full quotes, never seed from future prices.
+    const missingSeeds = new Set((firstEntries[0]?.results || [])
+      .filter((result) => result?.noChange && !result?.data)
+      .map((result) => result?.meta?.id)
+      .filter(Boolean));
+    const firstMonthIndex = availableMonths.indexOf(requestedMonths[0]);
+    for (let i = firstMonthIndex - 1; i >= 0 && missingSeeds.size; i -= 1) {
+      const previousEntries = await fetchMonthlyEntries(availableMonths[i]);
+      for (let j = previousEntries.length - 1; j >= 0 && missingSeeds.size; j -= 1) {
+        for (const result of previousEntries[j]?.results || []) {
+          const id = result?.meta?.id;
+          if (missingSeeds.has(id) && result?.data && typeof result.data === 'object') {
+            providerMap.set(id, result);
+            missingSeeds.delete(id);
+          }
+        }
+      }
+    }
+
     const snapshots = [];
-    for (const entry of entries) {
-      const results = Array.isArray(entry?.results) ? entry.results : [];
-      for (const result of results) applyCompactResultToMap(providerMap, result);
+    // At most three monthly downloads/decompressions happen in parallel.
+    for (let offset = 0; offset < requestedMonths.length; offset += 3) {
+      const batch = requestedMonths.slice(offset, offset + 3);
+      const monthlyEntries = await Promise.all(batch.map((key, i) =>
+        offset === 0 && i === 0 ? firstEntries : fetchMonthlyEntries(key)
+      ));
+      for (const entries of monthlyEntries) {
+        for (const entry of entries) {
+          const results = Array.isArray(entry?.results) ? entry.results : [];
+          for (const result of results) applyCompactResultToMap(providerMap, result);
 
-      const fullSnapshot = snapshotFromProviderMap(providerMap, entry);
-      const ts = new Date(entry?.runStartedAt || entry?.scheduledFor || '');
-      if (Number.isNaN(ts.getTime()) || ts < start || ts > end) continue;
+          const iso = entry?.runStartedAt || entry?.scheduledFor || '';
+          const dateOnly = toDateOnlyString(iso);
+          if (!dateOnly || dateOnly < startDateValue || dateOnly > endDateValue) continue;
+          const ts = new Date(iso);
+          if (Number.isNaN(ts.getTime())) continue;
 
-      const rows = filterVisibleRows(parseAllProviders(fullSnapshot));
-      snapshots.push({ ts, rows, snapshot: fullSnapshot });
+          const fullSnapshot = snapshotFromProviderMap(providerMap, entry);
+          // Retain only the selected pair and minimal legend metadata, not
+          // every currency quote in every historical snapshot.
+          const rows = filterVisibleRows(parseAllProviders(fullSnapshot))
+            .filter((row) => row.pair === pair);
+          const legendResults = fullSnapshot.results.map((result) => ({
+            meta: { id: result?.meta?.id, name: result?.meta?.name },
+          }));
+          snapshots.push({ ts, rows, snapshot: { results: legendResults } });
+        }
+      }
     }
 
     if (!snapshots.length) {
