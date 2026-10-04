@@ -1,7 +1,7 @@
 {
   "rev": 1,
-  "scheduledFor": "2026-10-04T15:07:00+03:00",
-  "runStartedAt": "2026-10-04T15:15:01+03:00",
+  "scheduledFor": "2026-10-04T20:07:00+03:00",
+  "runStartedAt": "2026-10-04T20:26:42+03:00",
   "timezone": "Europe/Istanbul",
   "results": [
     {
@@ -12,7 +12,7 @@
         "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail"
       },
       "ok": true,
-      "scrapedAt": "2026-10-04T12:15:02.749Z",
+      "scrapedAt": "2026-10-04T17:26:45.942Z",
       "providerUpdatedAt": "2026-10-02T20:11:14+03:00",
       "providerFingerprint": "53e41f3c4ead7c5891d5ebb2793fbcc31732cbc82a5d8fe1bbd34344c8143836",
       "sourceUrl": "https://customers.garantibbva.com.tr/digital-public/currency-convertor-public/v2/currency-convertor/currency-list-detail",
@@ -476,7 +476,7 @@
         "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0"
       },
       "ok": true,
-      "scrapedAt": "2026-10-04T12:15:04.049Z",
+      "scrapedAt": "2026-10-04T17:26:47.407Z",
       "providerUpdatedAt": null,
       "providerFingerprint": "209ef1da44d1a8dd089792510b5aae965e0bf7b8fd030bc5c34976dc44e8fb05",
       "sourceUrl": "https://www.kuveytturk.com.tr/ck0d84?B83A1EF44DD940F2FEC85646BDB25EA0",
@@ -555,36 +555,11 @@
         "name": "Yapı Kredi",
         "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies"
       },
-      "ok": true,
-      "scrapedAt": "2026-10-04T12:15:06.882Z",
-      "providerUpdatedAt": "2026-10-04T15:14:15+03:00",
-      "providerFingerprint": "3952d3cfcd1056adf3a5b206581e0027ef383f82f36b3439786876e1d820f1c6",
-      "sourceUrl": "https://www.yapikredi.com.tr/_ajaxproxy/general.aspx/LoadMainCurrencies",
-      "data": {
-        "EUR": {
-          "buy": 53.806488,
-          "sell": 56.54258,
-          "dailyStatus": "up",
-          "change": 0.095713675,
-          "previousDayBuyingPrice": 53.75268,
-          "previousDaySellingPrice": 56.4908638
-        },
-        "USD": {
-          "buy": 47.7124062,
-          "sell": 50.35374,
-          "dailyStatus": "up",
-          "change": 0.0905148461,
-          "previousDayBuyingPrice": 47.6671944,
-          "previousDaySellingPrice": 50.31027
-        },
-        "XAU": {
-          "buy": 6312.382,
-          "sell": 6834.257,
-          "dailyStatus": "up",
-          "change": 0.100408629,
-          "previousDayBuyingPrice": 6305.672,
-          "previousDaySellingPrice": 6827.78
-        }
+      "ok": false,
+      "scrapedAt": "2026-10-04T17:26:50.089Z",
+      "providerUpdatedAt": null,
+      "error": {
+        "message": "Yapi response does not contain payload.d array"
       },
       "noChange": false
     }
